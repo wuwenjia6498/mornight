@@ -1,0 +1,43 @@
+{
+  "name": "ai-reading-tool",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "@google/generative-ai": "^0.24.1",
+    "@pinecone-database/pinecone": "^6.1.1",
+    "@radix-ui/react-label": "^2.1.7",
+    "@radix-ui/react-scroll-area": "^1.2.9",
+    "@radix-ui/react-separator": "^1.1.7",
+    "@radix-ui/react-slot": "^1.2.3",
+    "@radix-ui/react-tabs": "^1.1.12",
+    "@supabase/supabase-js": "^2.52.0",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "date-fns": "^4.1.0",
+    "jszip": "^3.10.1",
+    "lucide-react": "^0.525.0",
+    "next": "14.2.15",
+    "next-themes": "^0.4.6",
+    "react": "^18.3.1",
+    "react-day-picker": "^9.8.0",
+    "react-dom": "^18.3.1",
+    "sonner": "^2.0.6",
+    "tailwind-merge": "^3.3.1"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/react": "^18",
+    "@types/react-dom": "^18",
+    "eslint": "^8.57.0",
+    "eslint-config-next": "14.2.15",
+    "tailwindcss": "^4",
+    "typescript": "^5"
+  }
+}
