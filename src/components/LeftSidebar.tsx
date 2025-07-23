@@ -97,51 +97,51 @@ export default function LeftSidebar({
   };
 
   return (
-    <div className="w-80 bg-gray-50 border-r border-gray-200 p-4 flex flex-col gap-4 overflow-y-auto">
+    <div className="w-96 bg-gray-50 border-r border-gray-200 p-6 flex flex-col gap-5 overflow-y-auto">
       {/* 标题 */}
-      <div className="text-xl font-bold text-gray-800 mb-2">
+      <div className="text-2xl font-bold text-gray-800 mb-3">
         内容生成控制台
       </div>
       
       {/* 日期选择器卡片 */}
       <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-sm font-medium text-gray-700 flex items-center gap-2">
-            <CalendarDays className="w-4 h-4" />
+        <CardHeader className="pb-4">
+          <CardTitle className="text-base font-medium text-gray-700 flex items-center gap-2">
+            <CalendarDays className="w-5 h-5" />
             选择日期
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-5">
           {/* 快速选择按钮 */}
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-3">
             <Button
               variant="outline"
               size="sm"
               onClick={selectToday}
-              className="text-xs"
+              className="text-sm px-4"
               disabled={isGenerating}
             >
-              <Clock className="w-3 h-3 mr-1" />
+              <Clock className="w-4 h-4 mr-2" />
               今天
             </Button>
             <Button
               variant="outline"
               size="sm"
               onClick={selectThisWeek}
-              className="text-xs"
+              className="text-sm px-4"
               disabled={isGenerating}
             >
-              <CalendarIcon className="w-3 h-3 mr-1" />
+              <CalendarIcon className="w-4 h-4 mr-2" />
               本周
             </Button>
             <Button
               variant="outline"
               size="sm"
               onClick={selectThisMonth}
-              className="text-xs"
+              className="text-sm px-4"
               disabled={isGenerating}
             >
-              <Users className="w-3 h-3 mr-1" />
+              <Users className="w-4 h-4 mr-2" />
               本月
             </Button>
           </div>
@@ -151,7 +151,7 @@ export default function LeftSidebar({
             mode="single"
             onSelect={handleDateSelect}
             selected={undefined} // 不设置selected，因为我们自己管理多选状态
-            className="rounded-md border"
+            className="rounded-md border w-full"
             disabled={isGenerating}
             modifiers={{
               selected: selectedDates
@@ -163,7 +163,7 @@ export default function LeftSidebar({
           
           {/* 选中日期列表 */}
           {selectedDates.length > 0 && (
-            <div className="space-y-2">
+            <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium text-gray-700">
                   已选择 {selectedDates.length} 个日期
@@ -172,20 +172,20 @@ export default function LeftSidebar({
                   variant="ghost"
                   size="sm"
                   onClick={clearAllDates}
-                  className="text-xs text-gray-500 hover:text-gray-700"
+                  className="text-sm text-gray-500 hover:text-gray-700"
                   disabled={isGenerating}
                 >
                   清空全部
                 </Button>
               </div>
               
-              <div className="max-h-32 overflow-y-auto space-y-1">
+              <div className="max-h-40 overflow-y-auto space-y-2">
                 {selectedDates
                   .sort((a, b) => a.getTime() - b.getTime())
                   .map((date, index) => (
                     <div
                       key={index}
-                      className="flex items-center justify-between bg-blue-50 text-blue-700 px-2 py-1 rounded text-xs"
+                      className="flex items-center justify-between bg-blue-50 text-blue-700 px-3 py-2 rounded-lg text-sm"
                     >
                       <span>
                         {formatDate(date)}
@@ -194,10 +194,10 @@ export default function LeftSidebar({
                         variant="ghost"
                         size="sm"
                         onClick={() => handleRemoveDate(date)}
-                        className="h-auto p-0.5 text-blue-700 hover:text-blue-900 hover:bg-blue-100"
+                        className="h-auto p-1 text-blue-700 hover:text-blue-900 hover:bg-blue-100"
                         disabled={isGenerating}
                       >
-                        <X className="w-3 h-3" />
+                        <X className="w-4 h-4" />
                       </Button>
                     </div>
                   ))}
@@ -210,33 +210,33 @@ export default function LeftSidebar({
       {/* 错误提示 */}
       {error && (
         <Card className="border-red-200 bg-red-50">
-          <CardContent className="pt-4">
-            <div className="text-red-700 text-sm">
-              <div className="font-medium mb-1">生成失败</div>
-              <div className="text-xs">{error}</div>
+          <CardContent className="pt-5">
+            <div className="text-red-700">
+              <div className="font-medium mb-2 text-base">生成失败</div>
+              <div className="text-sm">{error}</div>
             </div>
           </CardContent>
         </Card>
       )}
 
       {/* 生成按钮 */}
-      <div className="mt-auto pt-4">
+      <div className="mt-auto pt-5">
         <Button
           onClick={onGenerateContent}
           disabled={selectedDates.length === 0 || isGenerating}
-          className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium"
+          className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium text-base py-3"
           size="lg"
         >
           {isGenerating ? (
             <>
-              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              <Loader2 className="w-5 h-5 mr-2 animate-spin" />
               生成中...
             </>
           ) : (
             <>
               生成内容
               {selectedDates.length > 0 && (
-                <span className="ml-2 bg-blue-500 text-white px-2 py-0.5 rounded-full text-xs">
+                <span className="ml-2 bg-blue-500 text-white px-3 py-1 rounded-full text-sm">
                   {selectedDates.length}
                 </span>
               )}
@@ -245,13 +245,13 @@ export default function LeftSidebar({
         </Button>
         
         {selectedDates.length === 0 && !isGenerating && (
-          <p className="text-xs text-gray-500 text-center mt-2">
+          <p className="text-sm text-gray-500 text-center mt-3">
             请先选择至少一个日期
           </p>
         )}
         
         {isGenerating && (
-          <p className="text-xs text-blue-600 text-center mt-2">
+          <p className="text-sm text-blue-600 text-center mt-3">
             正在为 {selectedDates.length} 个日期生成内容...
           </p>
         )}

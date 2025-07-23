@@ -132,13 +132,13 @@ export default function RightSidebar({
 
   // 如果没有选中的内容，显示提示信息
   if (!selectedContent) {
-    return (
-      <div className="w-80 bg-gray-50 border-l border-gray-200 p-6 flex items-center justify-center">
+  return (
+      <div className="w-96 bg-gray-50 border-l border-gray-200 p-6 flex items-center justify-center">
         <div className="text-center">
-          <Calendar className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+          <Calendar className="w-16 h-16 text-gray-300 mx-auto mb-4" />
           <h3 className="text-lg font-medium text-gray-900 mb-2">请选择内容</h3>
           <p className="text-gray-600 text-sm">
-            请在左侧选择一项内容查看详情
+            请在中间栏选择一项内容查看详情
           </p>
         </div>
       </div>
@@ -146,15 +146,15 @@ export default function RightSidebar({
   }
 
   return (
-    <div className="w-80 bg-gray-50 border-l border-gray-200 flex flex-col h-full">
+    <div className="w-96 bg-gray-50 border-l border-gray-200 flex flex-col h-full">
       {/* 标题区域 */}
       <div className="p-6 border-b border-gray-200 bg-white">
-        <h2 className="text-lg font-semibold text-gray-900 mb-2">内容详情</h2>
-        <div className="space-y-1">
-          <div className="text-sm font-medium text-gray-900">
+        <h2 className="text-xl font-semibold text-gray-900 mb-3">内容详情</h2>
+        <div className="space-y-2">
+          <div className="text-base font-medium text-gray-900">
             {formatDate(selectedContent.date)}
           </div>
-          <div className="text-xs text-gray-600">
+          <div className="text-sm text-gray-600">
             {getContextDescription(selectedContent.context)}
           </div>
         </div>
@@ -167,27 +167,27 @@ export default function RightSidebar({
             {/* 文案内容Tabs */}
             <Tabs defaultValue="emotional" className="mb-6">
               <TabsList className="grid w-full grid-cols-3">
-                <TabsTrigger value="emotional" className="text-xs">
-                  <Heart className="w-3 h-3 mr-1" />
+                <TabsTrigger value="emotional" className="text-sm">
+                  <Heart className="w-4 h-4 mr-2" />
                   情感共鸣
                 </TabsTrigger>
-                <TabsTrigger value="cognitive" className="text-xs">
-                  <Brain className="w-3 h-3 mr-1" />
+                <TabsTrigger value="cognitive" className="text-sm">
+                  <Brain className="w-4 h-4 mr-2" />
                   认知提升
                 </TabsTrigger>
-                <TabsTrigger value="practical" className="text-xs">
-                  <BookOpen className="w-3 h-3 mr-1" />
+                <TabsTrigger value="practical" className="text-sm">
+                  <BookOpen className="w-4 h-4 mr-2" />
                   实用指导
                 </TabsTrigger>
               </TabsList>
 
               <TabsContent value="emotional" className="mt-4">
                 <Card>
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between mb-3">
+                  <CardContent className="p-5">
+                    <div className="flex items-center justify-between mb-4">
                       <div className="flex items-center gap-2">
-                        <Heart className="w-4 h-4 text-pink-600" />
-                        <h4 className="font-medium text-pink-800 text-sm">情感共鸣型文案</h4>
+                        <Heart className="w-5 h-5 text-pink-600" />
+                        <h4 className="font-medium text-pink-800 text-base">情感共鸣型文案</h4>
                       </div>
                       <Button
                         variant="ghost"
@@ -195,7 +195,7 @@ export default function RightSidebar({
                         className="h-8 w-8 p-0"
                         onClick={() => handleCopyText(selectedContent.content.emotional_copy, '情感共鸣型')}
                       >
-                        <Copy className="w-3 h-3" />
+                        <Copy className="w-4 h-4" />
                       </Button>
                     </div>
                     <p className="text-gray-700 text-sm leading-relaxed">
@@ -207,11 +207,11 @@ export default function RightSidebar({
 
               <TabsContent value="cognitive" className="mt-4">
                 <Card>
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between mb-3">
+                  <CardContent className="p-5">
+                    <div className="flex items-center justify-between mb-4">
                       <div className="flex items-center gap-2">
-                        <Brain className="w-4 h-4 text-blue-600" />
-                        <h4 className="font-medium text-blue-800 text-sm">认知提升型文案</h4>
+                        <Brain className="w-5 h-5 text-blue-600" />
+                        <h4 className="font-medium text-blue-800 text-base">认知提升型文案</h4>
                       </div>
                       <Button
                         variant="ghost"
@@ -219,7 +219,7 @@ export default function RightSidebar({
                         className="h-8 w-8 p-0"
                         onClick={() => handleCopyText(selectedContent.content.cognitive_copy, '认知提升型')}
                       >
-                        <Copy className="w-3 h-3" />
+                        <Copy className="w-4 h-4" />
                       </Button>
                     </div>
                     <p className="text-gray-700 text-sm leading-relaxed">
@@ -231,11 +231,11 @@ export default function RightSidebar({
 
               <TabsContent value="practical" className="mt-4">
                 <Card>
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between mb-3">
+                  <CardContent className="p-5">
+                    <div className="flex items-center justify-between mb-4">
                       <div className="flex items-center gap-2">
-                        <BookOpen className="w-4 h-4 text-green-600" />
-                        <h4 className="font-medium text-green-800 text-sm">实用指导型文案</h4>
+                        <BookOpen className="w-5 h-5 text-green-600" />
+                        <h4 className="font-medium text-green-800 text-base">实用指导型文案</h4>
                       </div>
                       <Button
                         variant="ghost"
@@ -243,7 +243,7 @@ export default function RightSidebar({
                         className="h-8 w-8 p-0"
                         onClick={() => handleCopyText(selectedContent.content.practical_copy, '实用指导型')}
                       >
-                        <Copy className="w-3 h-3" />
+                        <Copy className="w-4 h-4" />
                       </Button>
                     </div>
                     <p className="text-gray-700 text-sm leading-relaxed">
@@ -256,17 +256,17 @@ export default function RightSidebar({
 
             {/* 配图选择区域 */}
             {selectedContent.image_options && selectedContent.image_options.length > 0 && (
-              <div className="bg-white rounded-lg border border-gray-200 p-4">
+              <div className="bg-white rounded-lg border border-gray-200 p-5 mb-6">
                 <div className="flex items-center gap-2 mb-4">
-                  <ImageIcon className="w-4 h-4 text-purple-600" />
-                  <h4 className="font-medium text-gray-900 text-sm">选择配图</h4>
-                  <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
+                  <ImageIcon className="w-5 h-5 text-purple-600" />
+                  <h4 className="font-medium text-gray-900 text-base">选择配图</h4>
+                  <span className="text-sm text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
                     {selectedContent.image_options.length} 张可选
                   </span>
-                </div>
+      </div>
 
-                <div className="grid grid-cols-2 gap-3 mb-4">
-                  {selectedContent.image_options.slice(0, 6).map((image) => (
+                <div className="grid grid-cols-3 gap-3 mb-4">
+                  {selectedContent.image_options.slice(0, 9).map((image) => (
                     <div
                       key={image.id}
                       className={`relative group cursor-pointer rounded-lg overflow-hidden border-2 transition-all duration-200 ${
@@ -288,7 +288,7 @@ export default function RightSidebar({
                             if (parent) {
                               parent.innerHTML = `
                                 <div class="flex items-center justify-center h-full text-gray-400">
-                                  <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
                                   </svg>
                                 </div>
@@ -296,15 +296,15 @@ export default function RightSidebar({
                             }
                           }}
                         />
-                      </div>
-
+          </div>
+          
                       {/* 选中状态指示器 */}
                       {localSelectedImageId === image.id && (
                         <div className="absolute top-2 right-2">
                           <div className="bg-blue-500 text-white rounded-full p-1">
-                            <Check className="w-3 h-3" />
-                          </div>
-                        </div>
+                            <Check className="w-4 h-4" />
+            </div>
+          </div>
                       )}
 
                       {/* 悬停效果 */}
@@ -315,28 +315,28 @@ export default function RightSidebar({
                         <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 text-white p-2">
                           <div className="text-xs font-medium truncate">
                             {image.title}
-                          </div>
-                        </div>
+          </div>
+        </div>
                       )}
                     </div>
                   ))}
-                </div>
+      </div>
 
                 {/* 显示更多图片按钮 */}
-                {selectedContent.image_options.length > 6 && (
+                {selectedContent.image_options.length > 9 && (
                   <div className="text-center mb-4">
-                    <Button variant="outline" size="sm" className="text-xs">
-                      查看更多图片 ({selectedContent.image_options.length - 6} 张)
+                    <Button variant="outline" size="sm" className="text-sm">
+                      查看更多图片 ({selectedContent.image_options.length - 9} 张)
                     </Button>
-                  </div>
+        </div>
                 )}
 
                 {/* 确认选择和下载按钮 */}
-                <div className="flex gap-2">
+                <div className="flex gap-3 mb-4">
                   <Button
                     variant="outline"
                     size="sm"
-                    className="flex-1 text-xs"
+                    className="flex-1"
                     onClick={() => {
                       setLocalSelectedImageId(null);
                       if (onImageSelect && selectedContent) {
@@ -349,21 +349,21 @@ export default function RightSidebar({
                   </Button>
                   <Button
                     size="sm"
-                    className="flex-1 text-xs"
+                    className="flex-1"
                     onClick={handleConfirmSelection}
                     disabled={!localSelectedImageId}
                   >
                     确认选择
                   </Button>
-                </div>
+      </div>
 
                 {/* 下载按钮 - 只在选中图片时显示 */}
                 {localSelectedImageId && (
-                  <div className="mt-3 pt-3 border-t border-gray-200">
+                  <div className="pt-4 border-t border-gray-200">
                     <Button
                       variant="outline"
                       size="sm"
-                      className="w-full text-xs"
+                      className="w-full"
                       onClick={() => {
                         const selectedImage = selectedContent.image_options.find(img => img.id === localSelectedImageId);
                         if (selectedImage) {
@@ -372,7 +372,7 @@ export default function RightSidebar({
                         }
                       }}
                     >
-                      <Download className="w-3 h-3 mr-2" />
+                      <Download className="w-4 h-4 mr-2" />
                       下载高清图片
                     </Button>
                   </div>
@@ -383,19 +383,19 @@ export default function RightSidebar({
             {/* 搜索关键词 */}
             {selectedContent.content.keywords_for_image_search && 
              selectedContent.content.keywords_for_image_search.length > 0 && (
-              <div className="bg-white rounded-lg border border-gray-200 p-4 mt-4">
-                <h4 className="font-medium text-gray-900 text-sm mb-3">图片搜索关键词</h4>
+              <div className="bg-white rounded-lg border border-gray-200 p-5">
+                <h4 className="font-medium text-gray-900 text-base mb-3">图片搜索关键词</h4>
                 <div className="flex flex-wrap gap-2">
                   {selectedContent.content.keywords_for_image_search.map((keyword, index) => (
                     <span
                       key={index}
-                      className="px-2 py-1 text-xs bg-yellow-50 text-yellow-800 border border-yellow-200 rounded"
+                      className="px-3 py-1 text-sm bg-yellow-50 text-yellow-800 border border-yellow-200 rounded-full"
                     >
                       {keyword}
                     </span>
                   ))}
-                </div>
-              </div>
+          </div>
+          </div>
             )}
           </div>
         </ScrollArea>
