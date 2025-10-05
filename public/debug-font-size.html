@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>字体大小调试工具</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      padding: 40px;
+      line-height: 1.6;
+    }
+    .test-box {
+      border: 2px solid #0077be;
+      padding: 20px;
+      margin: 20px 0;
+      background: #f5f5f5;
+    }
+    .result {
+      background: #fff;
+      padding: 15px;
+      margin: 10px 0;
+      border-left: 4px solid #0077be;
+    }
+    button {
+      background: #0077be;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      font-size: 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      margin: 10px 5px;
+    }
+    button:hover {
+      background: #005fa3;
+    }
+    .warning {
+      background: #fff3cd;
+      border-left-color: #ffc107;
+      color: #856404;
+    }
+    .success {
+      background: #d4edda;
+      border-left-color: #28a745;
+      color: #155724;
+    }
+  </style>
+</head>
+<body>
+  <h1>🔍 字体大小调试工具</h1>
+  <p>此工具帮助你检查当前浏览器的字体设置</p>
+
+  <div class="test-box">
+    <h2>检测信息</h2>
+    <div id="results"></div>
+    <button onclick="runDiagnostics()">🔄 重新检测</button>
+    <button onclick="copyResults()">📋 复制结果</button>
+  </div>
+
+  <div class="test-box">
+    <h2>字体大小对比测试</h2>
+    <p style="font-size: 16px;">这段文字应该是 16px（1rem = text-base）</p>
+    <p style="font-size: 14px;">这段文字应该是 14px（0.875rem = text-sm）</p>
+    <p style="font-size: 18px;">这段文字应该是 18px（1.125rem = text-lg）</p>
+  </div>
+
+  <script>
+    function runDiagnostics() {
+      const results = [];
+      const resultsDiv = document.getElementById('results');
+      
+      // 检测 HTML 根元素字体大小
+      const htmlFontSize = getComputedStyle(document.documentElement).fontSize;
+      results.push({
+        label: 'HTML 根元素字体大小',
+        value: htmlFontSize,
+        expected: '16px',
+        isCorrect: htmlFontSize === '16px'
+      });
+      
+      // 检测 Body 字体大小
+      const bodyFontSize = getComputedStyle(document.body).fontSize;
+      results.push({
+        label: 'Body 字体大小',
+        value: bodyFontSize,
+        expected: '16px',
+        isCorrect: bodyFontSize === '16px'
+      });
+      
+      // 检测浏览器信息
+      results.push({
+        label: '浏览器',
+        value: navigator.userAgent,
+        expected: '-',
+        isCorrect: true
+      });
+      
+      // 检测屏幕信息
+      results.push({
+        label: '屏幕分辨率',
+        value: `${window.screen.width} × ${window.screen.height}`,
+        expected: '-',
+        isCorrect: true
+      });
+      
+      // 检测窗口大小
+      results.push({
+        label: '窗口大小',
+        value: `${window.innerWidth} × ${window.innerHeight}`,
+        expected: '-',
+        isCorrect: true
+      });
+      
+      // 检测设备像素比
+      results.push({
+        label: '设备像素比（DPR）',
+        value: window.devicePixelRatio,
+        expected: '-',
+        isCorrect: true
+      });
+      
+      // 检测缩放级别（估算）
+      const zoom = Math.round((window.outerWidth / window.innerWidth) * 100);
+      results.push({
+        label: '浏览器缩放级别（估算）',
+        value: zoom + '%',
+        expected: '100%',
+        isCorrect: zoom >= 95 && zoom <= 105
+      });
+      
+      // 渲染结果
+      let html = '';
+      results.forEach(result => {
+        const className = result.isCorrect ? 'result success' : 'result warning';
+        html += `
+          <div class="${className}">
+            <strong>${result.label}:</strong> ${result.value}
+            ${result.expected !== '-' ? `<br><small>期望值: ${result.expected}</small>` : ''}
+          </div>
+        `;
+      });
+      
+      resultsDiv.innerHTML = html;
+      
+      // 保存到全局变量供复制使用
+      window.diagnosticResults = results;
+    }
+    
+    function copyResults() {
+      if (!window.diagnosticResults) {
+        alert('请先运行检测！');
+        return;
+      }
+      
+      let text = '字体大小调试结果\n' + '='.repeat(40) + '\n\n';
+      window.diagnosticResults.forEach(result => {
+        text += `${result.label}: ${result.value}\n`;
+        if (result.expected !== '-') {
+          text += `  期望值: ${result.expected}\n`;
+          text += `  状态: ${result.isCorrect ? '✅ 正常' : '⚠️ 异常'}\n`;
+        }
+        text += '\n';
+      });
+      
+      navigator.clipboard.writeText(text).then(() => {
+        alert('✅ 检测结果已复制到剪贴板！');
+      }).catch(() => {
+        alert('❌ 复制失败，请手动复制');
+      });
+    }
+    
+    // 页面加载时自动运行检测
+    runDiagnostics();
+  </script>
+</body>
+</html>

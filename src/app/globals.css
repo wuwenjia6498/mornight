@@ -151,6 +151,27 @@
     -ms-text-size-adjust: 100%;
     text-size-adjust: 100%;
   }
+  
+  /* 强制覆盖 Tailwind 的字体大小类，确保一致性 */
+  .text-base {
+    font-size: 1rem !important; /* 16px */
+  }
+  
+  .text-sm {
+    font-size: 0.875rem !important; /* 14px */
+  }
+  
+  .text-lg {
+    font-size: 1.125rem !important; /* 18px */
+  }
+  
+  .text-xl {
+    font-size: 1.25rem !important; /* 20px */
+  }
+  
+  .text-2xl {
+    font-size: 1.5rem !important; /* 24px */
+  }
 }
 
 /* Line clamp utilities */
