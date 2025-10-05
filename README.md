@@ -1,6 +1,6 @@
-# AI儿童阅读教育内容生成工具
+# AI儿童阅读教育文案生成工具
 
-基于 Next.js 14+ (App Router) 开发的AI驱动儿童阅读教育内容生成平台。
+基于 Next.js 14+ (App Router) 开发的AI驱动儿童阅读教育文案生成工具，专注于为儿童阅读教育创作专业、优质的文案内容。
 
 ## 技术栈
 
@@ -10,16 +10,11 @@
 - **UI组件库**: shadcn/ui
 - **状态管理**: React Hooks
 - **AI服务**: Google Gemini API
-- **向量数据库**: Pinecone
-- **后端数据库**: Supabase
 - **包管理**: npm/pnpm
 
 ## 已安装的依赖
 
 ### 核心依赖
-- `@google/generative-ai` - Google Gemini API集成
-- `@pinecone-database/pinecone` - Pinecone向量数据库
-- `@supabase/supabase-js` - Supabase数据库客户端
 - `date-fns` - 日期处理工具
 - `lucide-react` - 图标库
 - `jszip` - 文件打包下载
@@ -84,21 +79,32 @@ src/
 
 参考 `.env.local.example` 文件配置以下环境变量：
 
-- `GOOGLE_GEMINI_API_KEY` - Google Gemini API 密钥
-- `PINECONE_API_KEY` - Pinecone API 密钥
-- `PINECONE_INDEX_NAME` - Pinecone 索引名称
-- `SUPABASE_URL` - Supabase 项目 URL
-- `SUPABASE_ANON_KEY` - Supabase 公开匿名 Key
+- `GEMINI_API_KEY` - Google Gemini API 密钥
+- `AIHUBMIX_API_URL` - AI Hub Mix API 地址（可选，默认使用官方地址）
 
 ## 开发说明
 
-项目已完成基础配置，包括：
-- ✅ Next.js 14+ 项目初始化
-- ✅ TypeScript 配置
-- ✅ Tailwind CSS 配置
-- ✅ ESLint 配置
-- ✅ shadcn/ui 组件库集成
-- ✅ 核心依赖包安装
-- ✅ 环境变量模板创建
+## 主要功能
 
-可以开始开发具体的功能模块了！
+### 🎯 文案生成功能
+- **三种类型文案**：为每个日期生成情感共鸣型、认知提升型、实用指导型三种不同风格的文案
+- **智能上下文**：结合季节、节气、节日等上下文信息，生成更贴合时节的内容
+- **批量处理**：支持选择多个日期进行批量文案生成
+- **实时预览**：可以在三种文案类型之间自由切换预览
+
+### 📦 导出功能
+- **批量导出**：支持将所有生成的文案内容打包为ZIP文件下载
+- **结构化存储**：每个日期的内容单独存储在以日期命名的文件夹中
+- **文本格式**：导出为易于阅读和编辑的文本文件
+
+### 🎨 用户界面
+- **现代化设计**：采用简约优雅的Apple风格设计
+- **响应式布局**：适配不同屏幕尺寸
+- **直观操作**：清晰的工作流程和用户引导
+
+## 使用指南
+
+1. **选择日期**：在左侧日历中选择需要生成文案的日期
+2. **生成内容**：点击生成按钮，AI将为选定日期创作三种类型的文案
+3. **预览文案**：在主内容区查看生成的文案，可切换不同类型
+4. **导出下载**：使用批量导出功能下载所有内容

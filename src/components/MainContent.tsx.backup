@@ -1,0 +1,689 @@
+import React, { useState } from 'react';
+import { format } from 'date-fns';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import JSZip from 'jszip';
+
+export type ColumnType = 'morning' | 'toddler' | 'primary';
+export type DisplayMode = 'morning' | 'toddler' | 'primary';
+
+interface GeneratedContent {
+  morning_copies: string[];
+  toddler_copies: string[];
+  primary_copies: string[];
+}
+
+interface ApiResponse {
+  date: string;
+  context: {
+    season: string;
+    solarTerm?: string;
+    festival?: string;
+    month: number;
+    day: number;
+    weekday: string;
+  };
+  content: GeneratedContent;
+}
+
+// 幼儿段/小学段内容结构
+interface SegmentContent {
+  copies: string[];
+  quote_index: number;
+}
+
+interface SegmentApiResponse {
+  type: 'toddler' | 'primary';
+  content: SegmentContent;
+}
+
+interface MainContentProps {
+  generatedContents?: ApiResponse[];
+  isGenerating?: boolean;
+  regeneratingState?: { date: string; column: ColumnType } | null;
+  onRegenerateColumn?: (date: string, column: ColumnType) => void;
+  selectedContent?: ApiResponse | null;
+  onContentSelect?: (content: ApiResponse) => void;
+  mode?: DisplayMode;
+  segmentContent?: SegmentApiResponse | null;
+}
+
+export default function MainContent({ 
+  generatedContents = [], 
+  isGenerating = false,
+  regeneratingState = null,
+  onRegenerateColumn,
+  selectedContent = null,
+  onContentSelect,
+  mode = 'morning',
+  segmentContent = null
+}: MainContentProps) {
+  
+  // 复制状态管理
+  const [copiedStates, setCopiedStates] = useState<{ [key: string]: boolean }>({});
+  
+  // 单条内容调整状态
+  const [editingItem, setEditingItem] = useState<{
+    content: string;
+    index: number;
+    type: 'morning' | 'segment';
+    originalContent?: string;
+  } | null>(null);
+  const [adjustmentRequest, setAdjustmentRequest] = useState('');
+  const [isAdjusting, setIsAdjusting] = useState(false);
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return format(date, 'yyyy年MM月dd日');
+  };
+
+  const getContextDescription = (context: ApiResponse['context']) => {
+    let description = `${context.season} · ${context.weekday}`;
+    if (context.solarTerm) {
+      description += ` · ${context.solarTerm}`;
+    }
+    if (context.festival) {
+      description += ` · ${context.festival}`;
+    }
+    return description;
+  };
+
+  const handleCardClick = (content: ApiResponse) => {
+    if (onContentSelect) {
+      onContentSelect(content);
+    }
+  };
+
+  const isSelected = (content: ApiResponse) => {
+    return selectedContent?.date === content.date;
+  };
+
+
+  // 复制文案功能
+  const handleCopyText = async (text: string, key: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedStates(prev => ({ ...prev, [key]: true }));
+      setTimeout(() => {
+        setCopiedStates(prev => ({ ...prev, [key]: false }));
+      }, 2000);
+    } catch (err) {
+      console.error('复制失败:', err);
+    }
+  };
+
+  // 单条内容调整功能
+  const handleEditItem = (content: string, index: number, type: 'morning' | 'segment') => {
+    setEditingItem({ content, index, type, originalContent: content });
+    setAdjustmentRequest('');
+  };
+
+  const handleSubmitAdjustment = async () => {
+    if (!editingItem || !adjustmentRequest.trim()) return;
+
+    setIsAdjusting(true);
+
+    try {
+      const response = await fetch('/api/adjust', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          originalContent: editingItem.originalContent,
+          adjustmentRequest: adjustmentRequest.trim(),
+          contentType: mode,
+          index: editingItem.index
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || '内容调整失败');
+      }
+
+      const result = await response.json();
+      
+      if (result.success) {
+        // TODO: 更新对应的内容状态
+        console.log('内容调整成功:', result.adjustedContent);
+        setEditingItem(null);
+        setAdjustmentRequest('');
+      } else {
+        throw new Error('API返回错误');
+      }
+
+    } catch (err) {
+      console.error('内容调整时出错:', err);
+      // TODO: 显示错误提示
+    } finally {
+      setIsAdjusting(false);
+    }
+  };
+
+
+  // 批量导出功能
+  const handleBatchExport = async () => {
+    if (generatedContents.length === 0) {
+      console.error('没有可导出的内容');
+      return;
+    }
+
+    console.info('开始准备导出文件...');
+    
+    try {
+      const zip = new JSZip();
+      
+      for (const item of generatedContents) {
+        const dateFolder = format(new Date(item.date), 'yyyy-MM-dd');
+        const folder = zip.folder(dateFolder);
+        
+        if (!folder) continue;
+
+        // 创建内容文本文件
+        const contentText = `日期：${formatDate(item.date)}
+上下文：${getContextDescription(item.context)}
+
+==============================
+  早安寄语
+==============================
+
+${item.content.morning_copies.map((copy, i) => `${i + 1}. ${copy}`).join('\n\n')}
+
+==============================
+  幼儿段 (0-6岁)
+==============================
+
+${item.content.toddler_copies.map((copy, i) => `${i + 1}. ${copy}`).join('\n\n')}
+
+==============================
+  小学段
+==============================
+
+${item.content.primary_copies.map((copy, i) => `${i + 1}. ${copy}`).join('\n\n')}
+`;
+
+        folder.file('content.txt', contentText);
+      }
+
+      console.info('正在生成压缩文件...');
+      
+      // 生成zip文件
+      const zipBlob = await zip.generateAsync({ type: 'blob' });
+      
+      // 创建下载链接
+      const url = window.URL.createObjectURL(zipBlob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `AI文案内容_${format(new Date(), 'yyyy-MM-dd_HH-mm-ss')}.zip`;
+      document.body.appendChild(link);
+      link.click();
+      
+      // 清理
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      
+      console.log(`成功导出 ${generatedContents.length} 项内容！`);
+      
+    } catch (error) {
+      console.error('批量导出失败:', error);
+    }
+  };
+
+  // 渲染幼儿段/小学段内容
+  const renderSegmentContent = () => {
+    if (isGenerating) {
+      return (
+        <div className="flex-1 bg-white p-4 flex items-center justify-center">
+          <div className="text-center">
+            <Loader2 className="w-12 h-12 text-blue-500 animate-spin mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 mb-2">正在生成内容</h3>
+            <p className="text-gray-600">AI正在为您精心创作{mode === 'toddler' ? '幼儿段' : '小学段'}阅读教育文案...</p>
+          </div>
+        </div>
+      );
+    }
+
+    if (!segmentContent) {
+      const config = {
+        toddler: {
+          icon: Baby,
+          title: '幼儿段文案生成',
+          subtitle: '0-6岁儿童阅读指导',
+          description: '选择生成条数，AI将为您创作专业的绘本阅读和亲子共读指导文案。',
+          features: [
+            '• 专注绘本阅读与亲子共读',
+            '• 保护想象力，建立安全感',
+            '• 语言启蒙与认知框架构建',
+            '• 包含一条幼儿启蒙名人名言'
+          ]
+        },
+        primary: {
+          icon: School,
+          title: '小学段文案生成',
+          subtitle: '小学生阅读能力提升',
+          description: '选择生成条数，AI将为您创作实用的阅读习惯与能力提升指导文案。',
+          features: [
+            '• 阅读习惯与能力提升',
+            '• 实用技巧与方法指导',
+            '• 亲子共读策略',
+            '• 包含一条学习成长名人名言'
+          ]
+        }
+      };
+
+      const currentConfig = config[mode as 'toddler' | 'primary'];
+      const Icon = currentConfig.icon;
+
+      return (
+        <div className="flex-1 bg-white p-4 flex items-center justify-center">
+          <div className="text-center max-w-md">
+            <Icon className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 mb-2">{currentConfig.title}</h3>
+            <p className="text-gray-600 mb-4">{currentConfig.description}</p>
+            <div className="bg-blue-50 rounded-lg p-4 text-sm text-blue-700">
+              <div className="font-medium mb-2">✨ 功能特点</div>
+              <ul className="text-left space-y-1">
+                {currentConfig.features.map((feature, index) => (
+                  <li key={index}>{feature}</li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // 显示生成的幼儿段/小学段内容
+    const { copies, quote_index } = segmentContent.content;
+    const config = mode === 'toddler' ? 
+      { title: '幼儿段阅读指导', icon: Baby, color: 'rose' } : 
+      { title: '小学段阅读指导', icon: School, color: 'sky' };
+    const Icon = config.icon;
+
+    return (
+      <div className="flex-1 bg-white">
+        <div className="p-4 border-b border-gray-200">
+          <div className="flex justify-between items-center">
+            <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+              <Icon className={mode === 'toddler' ? 'w-6 h-6 text-rose-600' : 'w-6 h-6 text-sky-600'} />
+              {config.title}
+              <span className="text-base text-gray-500 font-normal ml-2">
+                ({copies.length} 条内容)
+              </span>
+            </h2>
+          </div>
+          <p className="text-gray-600 mt-1 text-sm">专业的AI儿童阅读教育文案生成工具</p>
+        </div>
+
+        <ScrollArea className="h-[calc(100vh-180px)]">
+          <div className="p-6">
+            <div className="max-w-4xl mx-auto space-y-4">
+              {copies.map((copy, index) => (
+                <Card
+                  key={index}
+                  className={`transition-all duration-200 hover:shadow-md border ${
+                    index === quote_index 
+                      ? 'border-amber-300 bg-amber-50' 
+                      : mode === 'toddler' 
+                        ? 'border-rose-200 bg-rose-50'
+                        : 'border-sky-200 bg-sky-50'
+                  }`}
+                >
+                  <CardContent className="p-6">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-3 mb-3">
+                          {index === quote_index ? (
+                            <>
+                              <div className="bg-amber-100 p-2 rounded-full">
+                                <Quote className="w-5 h-5 text-amber-600" />
+                              </div>
+                              <span className="font-medium text-amber-800">名人名言</span>
+                            </>
+                          ) : (
+                            <>
+                              <div className={mode === 'toddler' ? 'bg-rose-100 p-2 rounded-full' : 'bg-sky-100 p-2 rounded-full'}>
+                                <Sparkles className={mode === 'toddler' ? 'w-5 h-5 text-rose-600' : 'w-5 h-5 text-sky-600'} />
+                              </div>
+                              <span className={mode === 'toddler' ? 'font-medium text-rose-800' : 'font-medium text-sky-800'}>
+                                专业指导 #{index + 1}
+                              </span>
+                            </>
+                          )}
+                        </div>
+                        <p className="text-gray-800 leading-relaxed whitespace-pre-line text-sm mb-4">
+                          {copy}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {/* 复制按钮 */}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 w-8 p-0 text-gray-400 hover:text-gray-700 hover:bg-gray-100"
+                          onClick={() => handleCopyText(copy, `${mode}-${index}`)}
+                        >
+                          {copiedStates[`${mode}-${index}`] ? (
+                            <Check className="w-4 h-4 text-green-600" />
+                          ) : (
+                            <Copy className="w-4 h-4" />
+                          )}
+                        </Button>
+                        {/* 调整按钮 */}
+                        <Dialog>
+                          <DialogTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 w-8 p-0 text-gray-400 hover:text-gray-700 hover:bg-gray-100"
+                              onClick={() => handleEditItem(copy, index, 'segment')}
+                            >
+                              <Edit className="w-4 h-4" />
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent className="max-w-2xl">
+                            <DialogHeader>
+                              <DialogTitle>调整内容</DialogTitle>
+                            </DialogHeader>
+                            <div className="space-y-4">
+                              <div>
+                                <label className="text-sm font-medium text-gray-700 block mb-2">
+                                  原始内容
+                                </label>
+                                <div className="bg-gray-50 p-4 rounded-lg text-sm text-gray-700 border">
+                                  {copy}
+                                </div>
+                              </div>
+                              <div>
+                                <label className="text-sm font-medium text-gray-700 block mb-2">
+                                  调整要求
+                                </label>
+                                <textarea
+                                  value={adjustmentRequest}
+                                  onChange={(e) => setAdjustmentRequest(e.target.value)}
+                                  placeholder="请描述您希望如何调整这条内容..."
+                                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 min-h-[100px]"
+                                />
+                              </div>
+                              <div className="flex justify-end gap-3">
+                                <Button
+                                  variant="outline"
+                                  onClick={() => {
+                                    setEditingItem(null);
+                                    setAdjustmentRequest('');
+                                  }}
+                                  disabled={isAdjusting}
+                                >
+                                  取消
+                                </Button>
+                                <Button
+                                  onClick={handleSubmitAdjustment}
+                                  disabled={!adjustmentRequest.trim() || isAdjusting}
+                                >
+                                  {isAdjusting ? (
+                                    <>
+                                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                      调整中...
+                                    </>
+                                  ) : (
+                                    '确认调整'
+                                  )}
+                                </Button>
+                              </div>
+                            </div>
+                          </DialogContent>
+                        </Dialog>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
+        </ScrollArea>
+      </div>
+    );
+  };
+
+  // 如果是幼儿段或小学段模式，使用专门的渲染函数
+  if (mode === 'toddler' || mode === 'primary') {
+    return renderSegmentContent();
+  }
+
+  // 以下是早安语模式的渲染逻辑
+  // 如果正在生成且没有内容，显示加载状态
+  if (isGenerating && generatedContents.length === 0) {
+    return (
+      <div className="flex-1 bg-white p-4 flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="w-12 h-12 text-blue-500 animate-spin mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-gray-900 mb-2">正在生成内容</h3>
+          <p className="text-gray-600">AI正在为您精心创作早安语内容...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // 如果没有生成的内容，显示默认状态
+  if (generatedContents.length === 0) {
+    return (
+      <div className="flex-1 bg-white p-4 flex items-center justify-center">
+        <div className="text-center max-w-md">
+          <Sunrise className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-gray-900 mb-2">开始创作早安语吧！</h3>
+          <p className="text-gray-600 mb-4">
+            选择日期，AI将以童书编辑的专业视角，为您创作富有哲思的早安寄语。
+          </p>
+          <div className="bg-blue-50 rounded-lg p-4 text-sm text-blue-700">
+            <div className="font-medium mb-2">✨ 功能特点</div>
+            <ul className="text-left space-y-1">
+              <li>• 避免俗套的哲思内容</li>
+              <li>• 结合节气节日的情境感知</li>
+              <li>• 每个日期生成4条独立文案</li>
+              <li>• 包含一条成长励志名人名言</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex-1 bg-white">
+      <div className="p-4 border-b border-gray-200">
+        <div className="flex justify-between items-center">
+          <h2 className="text-xl font-bold text-gray-900">
+            生成的内容
+            <span className="text-base text-gray-500 font-normal ml-2">
+              ({generatedContents.length} 个日期)
+            </span>
+          </h2>
+          <div className="flex items-center gap-3">
+            {isGenerating && (
+              <div className="flex items-center text-blue-600">
+                <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                <span className="text-sm">生成中...</span>
+              </div>
+            )}
+            {/* 批量导出按钮 */}
+            {generatedContents.length > 0 && (
+              <Button
+                onClick={handleBatchExport}
+                disabled={isGenerating}
+                variant="outline"
+                size="sm"
+                className="flex items-center gap-2"
+              >
+                <Package className="w-4 h-4" />
+                批量导出
+              </Button>
+            )}
+          </div>
+        </div>
+        <p className="text-gray-600 mt-1 text-sm">专业的AI儿童阅读教育文案生成工具</p>
+      </div>
+
+      {/* 内容列表 */}
+      <ScrollArea className="h-[calc(100vh-180px)]">
+        <div className="p-6">
+          <div className="max-w-7xl mx-auto space-y-4">
+            {generatedContents.map((item, index) => {
+
+              return (
+                <Card
+                  key={index}
+                  className="transition-all duration-200 hover:shadow-md border border-gray-200 hover:border-gray-300"
+                >
+                  <CardHeader className="pb-3">
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <CardTitle className="text-lg font-bold text-gray-900 mb-1">
+                          {formatDate(item.date)}
+                        </CardTitle>
+                        <div className="text-sm text-gray-600">
+                          {getContextDescription(item.context)}
+                        </div>
+                      </div>
+                    </div>
+                  </CardHeader>
+
+                  <CardContent className="pt-0">
+
+                    {/* 早安语内容显示 */}
+                    <div className="bg-amber-50 rounded-lg p-4 border border-amber-200">
+                      <div className="flex items-center justify-between gap-3 mb-4">
+                        <div className="flex items-center gap-3">
+                          <div className="bg-amber-100 p-2 rounded-full">
+                            <Sunrise className="w-5 h-5 text-amber-600" />
+                          </div>
+                          <h4 className="font-bold text-amber-800 text-lg">早安寄语</h4>
+                        </div>
+                        {onRegenerateColumn && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 w-7 p-0 text-amber-600 hover:text-amber-800 hover:bg-amber-100"
+                            onClick={() => onRegenerateColumn(item.date, 'morning')}
+                            disabled={!!regeneratingState}
+                          >
+                            {regeneratingState?.date === item.date && regeneratingState?.column === 'morning' ? (
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <RefreshCw className="w-4 h-4" />
+                            )}
+                          </Button>
+                        )}
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {item.content.morning_copies.map((copy, i) => (
+                          <div key={i} className="bg-white p-4 rounded-md shadow-sm border border-amber-100 relative group">
+                            <div className="flex items-center gap-2 mb-3">
+                              {i === 4 ? (
+                                <>
+                                  <Quote className="w-4 h-4 text-amber-600" />
+                                  <span className="text-xs font-medium text-amber-700">名人名言</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Sparkles className="w-4 h-4 text-amber-600" />
+                                  <span className="text-xs font-medium text-amber-700">早安寄语 #{i + 1}</span>
+                                </>
+                              )}
+                            </div>
+                            <p className="text-gray-800 leading-relaxed whitespace-pre-line text-sm mb-3">{copy}</p>
+                            <div className="flex items-center gap-2 justify-end">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 w-7 p-0 text-gray-400 hover:text-gray-700 hover:bg-gray-100 opacity-0 group-hover:opacity-100 transition-opacity"
+                                onClick={() => handleCopyText(copy, `${item.date}-morning-${i}`)}
+                              >
+                                {copiedStates[`${item.date}-morning-${i}`] ? (
+                                  <Check className="w-4 h-4 text-green-600" />
+                                ) : (
+                                  <Copy className="w-4 h-4" />
+                                )}
+                              </Button>
+                              <Dialog>
+                                <DialogTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-7 w-7 p-0 text-gray-400 hover:text-gray-700 hover:bg-gray-100 opacity-0 group-hover:opacity-100 transition-opacity"
+                                    onClick={() => handleEditItem(copy, i, 'morning')}
+                                  >
+                                    <Edit className="w-4 h-4" />
+                                  </Button>
+                                </DialogTrigger>
+                                <DialogContent className="max-w-2xl">
+                                  <DialogHeader>
+                                    <DialogTitle>调整早安语内容</DialogTitle>
+                                  </DialogHeader>
+                                  <div className="space-y-4">
+                                    <div>
+                                      <label className="text-sm font-medium text-gray-700 block mb-2">
+                                        原始内容
+                                      </label>
+                                      <div className="bg-gray-50 p-4 rounded-lg text-sm text-gray-700 border">
+                                        {copy}
+                                      </div>
+                                    </div>
+                                    <div>
+                                      <label className="text-sm font-medium text-gray-700 block mb-2">
+                                        调整要求
+                                      </label>
+                                      <textarea
+                                        value={adjustmentRequest}
+                                        onChange={(e) => setAdjustmentRequest(e.target.value)}
+                                        placeholder="请描述您希望如何调整这条早安语..."
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 min-h-[100px]"
+                                      />
+                                    </div>
+                                    <div className="flex justify-end gap-3">
+                                      <Button
+                                        variant="outline"
+                                        onClick={() => {
+                                          setEditingItem(null);
+                                          setAdjustmentRequest('');
+                                        }}
+                                        disabled={isAdjusting}
+                                      >
+                                        取消
+                                      </Button>
+                                      <Button
+                                        onClick={handleSubmitAdjustment}
+                                        disabled={!adjustmentRequest.trim() || isAdjusting}
+                                      >
+                                        {isAdjusting ? (
+                                          <>
+                                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                            调整中...
+                                          </>
+                                        ) : (
+                                          '确认调整'
+                                        )}
+                                      </Button>
+                                    </div>
+                                  </div>
+                                </DialogContent>
+                              </Dialog>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        </div>
+      </ScrollArea>
+
+    </div>
+  );
+} 

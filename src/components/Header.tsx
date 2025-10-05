@@ -1,78 +1,82 @@
-import React from 'react';
+"use client"
 
-export default function Header() {
+import React from 'react';
+import Image from 'next/image';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { ImagePlus } from 'lucide-react';
+
+export type TabType = 'morning' | 'toddler' | 'primary' | 'quote';
+
+interface HeaderProps {
+  activeTab: TabType;
+  onTabChange: (tab: TabType) => void;
+}
+
+export default function Header({ activeTab, onTabChange }: HeaderProps) {
   return (
     <header className="bg-white border-b border-gray-200 px-6 py-4">
       <div className="flex items-center justify-between">
-        {/* 左侧标题和导航 */}
-        <div className="flex items-center gap-8">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-sm">AI</span>
-            </div>
-            <h1 className="text-xl font-bold text-gray-900">AI 阅读助手</h1>
-          </div>
-          
-          <nav className="hidden md:flex items-center gap-6">
-            <a href="#" className="text-blue-600 font-medium text-sm border-b-2 border-blue-600 pb-1">
-              内容生成
-            </a>
-            <a href="#" className="text-gray-600 hover:text-gray-900 text-sm transition-colors">
-              文档管理
-            </a>
-            <a href="#" className="text-gray-600 hover:text-gray-900 text-sm transition-colors">
-              知识库
-            </a>
-            <a href="#" className="text-gray-600 hover:text-gray-900 text-sm transition-colors">
-              分析报告
-            </a>
-          </nav>
-        </div>
-
-        {/* 右侧工具栏 */}
-        <div className="flex items-center gap-4">
-          {/* 搜索框 */}
-          <div className="relative hidden lg:block">
-            <input
-              type="text"
-              placeholder="全局搜索..."
-              className="w-64 px-3 py-1.5 pl-8 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+        {/* 左侧标题 */}
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 relative flex items-center justify-center">
+            <Image 
+              src="/logo-1.jpg" 
+              alt="Logo" 
+              width={40} 
+              height={40}
+              className="object-contain rounded-lg"
+              priority
             />
-            <div className="absolute inset-y-0 left-0 pl-2 flex items-center pointer-events-none">
-              <svg className="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-            </div>
           </div>
-
-          {/* 通知按钮 */}
-          <button className="relative p-2 text-gray-400 hover:text-gray-600 transition-colors">
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-5 5-5-5h5v-12h0z" />
-            </svg>
-            <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
-          </button>
-
-          {/* 设置按钮 */}
-          <button className="p-2 text-gray-400 hover:text-gray-600 transition-colors">
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-            </svg>
-          </button>
-
-          {/* 用户头像 */}
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center">
-              <span className="text-gray-600 text-sm font-medium">用</span>
-            </div>
-            <div className="hidden md:block">
-              <div className="text-sm font-medium text-gray-900">用户名</div>
-              <div className="text-xs text-gray-500">user@example.com</div>
-            </div>
-          </div>
+          <h1 className="text-xl font-bold text-gray-900">儿童阅读文案生成控制台</h1>
         </div>
+
+        {/* 中间导航栏 */}
+        <div className="flex-1 flex justify-center">
+          <Tabs value={activeTab} onValueChange={(value) => onTabChange(value as TabType)}>
+            <TabsList className="grid w-full max-w-5xl grid-cols-4 h-14 bg-gray-100 p-1.5 gap-2">
+              <TabsTrigger 
+                value="morning" 
+                className="text-base font-medium px-20 h-full rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm transition-all"
+              >
+                早安语
+              </TabsTrigger>
+              <TabsTrigger 
+                value="toddler" 
+                className="text-base font-medium px-20 h-full rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm transition-all"
+              >
+                幼儿段
+              </TabsTrigger>
+              <TabsTrigger 
+                value="primary" 
+                className="text-base font-medium px-20 h-full rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm transition-all"
+              >
+                小学段
+              </TabsTrigger>
+              <TabsTrigger 
+                value="quote" 
+                className="text-base font-medium px-20 h-full rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm transition-all"
+              >
+                名人名言
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </div>
+
+        {/* 右上角外链 */}
+        <div className="flex items-center mr-12">
+          <a
+            href="https://image.skyline666.top/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-brand-blue-500 to-brand-blue-600 text-white rounded-lg hover:from-brand-blue-600 hover:to-brand-blue-700 transition-all duration-200 shadow-sm hover:shadow-md"
+          >
+            <ImagePlus className="w-5 h-5" />
+            <span className="font-medium text-sm">去配图</span>
+          </a>
+        </div>
+
       </div>
     </header>
   );
-} 
+}

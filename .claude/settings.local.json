@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(netstat -ano)",
+      "Bash(findstr :300)",
+      "Bash(taskkill /F /PID 8044 /PID 2800 /PID 10128)",
+      "Bash(taskkill /F /PID 8044)",
+      "Bash(taskkill /F /PID 2800)",
+      "Bash(taskkill /F /PID 10128)",
+      "Bash(npm run dev)",
+      "Bash(curl -X POST http://localhost:3001/api/generate -H \"Content-Type: application/json\" -d \"{\"\"dates\"\":[\"\"2025-10-06\"\"]}\" --max-time 60)",
+      "Bash(curl -X POST http://localhost:3001/api/generate -H \"Content-Type: application/json\" -d \"{\"\"dates\"\":[\"\"2025-10-07\"\"]}\" --max-time 60)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

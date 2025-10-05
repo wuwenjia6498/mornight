@@ -1,26 +1,19 @@
 "use client"
 
 import { useState } from 'react';
-import Header from '@/components/Header';
+import Header, { TabType } from '@/components/Header';
 import LeftSidebar from '@/components/LeftSidebar';
-import MainContent from '@/components/MainContent';
-import RightSidebar from '@/components/RightSidebar';
+import CountSelector, { ContentType } from '@/components/CountSelector';
+import QuoteSelector, { QuoteType } from '@/components/QuoteSelector';
+import MainContent, { ColumnType } from '@/components/MainContent';
+import Footer from '@/components/Footer';
 
-interface GeneratedContent {
-  emotional_copy: string;
-  cognitive_copy: string;
-  practical_copy: string;
-  keywords_for_image_search: string[];
+// 早安语模式的接口定义
+interface MorningContent {
+  morning_copies: string[];
 }
 
-interface ImageOption {
-  id: string;
-  url: string;
-  title?: string;
-  description?: string;
-}
-
-interface ApiResponse {
+interface MorningApiResponse {
   date: string;
   context: {
     season: string;
@@ -30,50 +23,74 @@ interface ApiResponse {
     day: number;
     weekday: string;
   };
-  content: GeneratedContent;
-  image_options: ImageOption[];
+  content: MorningContent;
+}
+
+// 幼儿段/小学段模式的接口定义
+interface SegmentContent {
+  copies: string[];
+  quote_index: number; // 名人名言的索引位置
+}
+
+interface SegmentApiResponse {
+  type: 'toddler' | 'primary' | 'quote';
+  content: SegmentContent;
+  quoteType?: 'morning' | 'toddler' | 'primary';  // 名人名言的场景类型
 }
 
 export default function Home() {
+  // 导航状态
+  const [activeTab, setActiveTab] = useState<TabType>('morning');
+
+  // 早安语模式状态
   const [selectedDates, setSelectedDates] = useState<Date[]>([]);
-  const [generatedContents, setGeneratedContents] = useState<ApiResponse[]>([]);
-  const [selectedContent, setSelectedContent] = useState<ApiResponse | null>(null);
-  const [selectedImages, setSelectedImages] = useState<{ [date: string]: string }>({});
+  const [morningContents, setMorningContents] = useState<MorningApiResponse[]>([]);
+  const [selectedMorningContent, setSelectedMorningContent] = useState<MorningApiResponse | null>(null);
+
+  // 幼儿段/小学段模式状态
+  const [toddlerCount, setToddlerCount] = useState(10);
+  const [primaryCount, setPrimaryCount] = useState(10);
+  const [toddlerContent, setToddlerContent] = useState<SegmentApiResponse | null>(null);
+  const [primaryContent, setPrimaryContent] = useState<SegmentApiResponse | null>(null);
+
+  // 名人名言模式状态
+  const [quoteType, setQuoteType] = useState<QuoteType | null>(null);
+  const [quoteCount, setQuoteCount] = useState(5);
+  // 为每个场景分别保存内容
+  const [quoteMorningContent, setQuoteMorningContent] = useState<SegmentApiResponse | null>(null);
+  const [quoteToddlerContent, setQuoteToddlerContent] = useState<SegmentApiResponse | null>(null);
+  const [quotePrimaryContent, setQuotePrimaryContent] = useState<SegmentApiResponse | null>(null);
+
+  // 通用状态
   const [isGenerating, setIsGenerating] = useState(false);
+  const [regeneratingState, setRegeneratingState] = useState<{ date: string; column: ColumnType } | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  // 处理导航切换
+  const handleTabChange = (tab: TabType) => {
+    setActiveTab(tab);
+    setError(null); // 切换时清除错误信息
+  };
+
+  // 早安语模式：处理日期选择
   const handleDatesChange = (dates: Date[]) => {
     setSelectedDates(dates);
   };
 
-  const handleContentSelect = (content: ApiResponse) => {
-    setSelectedContent(content);
+  // 早安语模式：处理内容选择
+  const handleMorningContentSelect = (content: MorningApiResponse) => {
+    setSelectedMorningContent(content);
   };
 
-  // 处理图片选择
-  const handleImageSelect = (date: string, imageId: string | null) => {
-    setSelectedImages(prev => {
-      const newSelection = { ...prev };
-      if (imageId === null) {
-        delete newSelection[date];
-      } else {
-        newSelection[date] = imageId;
-      }
-      return newSelection;
-    });
-  };
-
-  const handleGenerateContent = async () => {
+  // 早安语模式：生成内容
+  const handleGenerateMorningContent = async () => {
     if (selectedDates.length === 0) return;
 
     setIsGenerating(true);
     setError(null);
-    // 清空之前选中的内容
-    setSelectedContent(null);
-    setSelectedImages({});
+    setSelectedMorningContent(null);
 
     try {
-      // 修复时区问题：使用本地时间格式化日期
       const dateStrings = selectedDates.map(date => {
         const year = date.getFullYear();
         const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -81,8 +98,7 @@ export default function Home() {
         return `${year}-${month}-${day}`;
       });
 
-      console.log('前端选择的原始Date对象:', selectedDates);
-      console.log('转换后的日期字符串:', dateStrings);
+      console.log('生成早安语，日期:', dateStrings);
 
       const response = await fetch('/api/generate', {
         method: 'POST',
@@ -90,68 +106,333 @@ export default function Home() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
+          type: 'morning',
           dates: dateStrings
         }),
       });
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || '生成内容失败');
+        throw new Error(errorData.error || '生成早安语失败');
       }
 
       const result = await response.json();
       
       if (result.success) {
-        setGeneratedContents(result.data);
-        console.log('API返回的生成内容:', result.data);
-        // 如果只有一个内容，自动选中它
-        if (result.data.length === 1) {
-          setSelectedContent(result.data[0]);
+        setMorningContents(result.results);
+        if (result.results && result.results.length === 1) {
+          setSelectedMorningContent(result.results[0]);
         }
       } else {
         throw new Error('API返回错误');
       }
 
     } catch (err) {
-      console.error('生成内容时出错:', err);
+      console.error('生成早安语时出错:', err);
       setError(err instanceof Error ? err.message : '未知错误');
     } finally {
       setIsGenerating(false);
     }
   };
 
-  return (
-    <div className="min-h-screen bg-gray-100">
-      {/* 页头 */}
-      <Header />
+  // 幼儿段/小学段模式：生成内容
+  const handleGenerateSegmentContent = async (type: ContentType) => {
+    const count = type === 'toddler' ? toddlerCount : primaryCount;
+    
+    setIsGenerating(true);
+    setError(null);
+
+    try {
+      console.log(`生成${type}内容，条数:`, count);
+
+      const response = await fetch('/api/generate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          type: type,
+          count: count
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `生成${type === 'toddler' ? '幼儿段' : '小学段'}内容失败`);
+      }
+
+      const result = await response.json();
       
-      {/* 主要工作区 - 三栏布局 */}
-      <div className="flex h-[calc(100vh-73px)]">
-        {/* 左侧栏 */}
+      if (result.success) {
+        if (type === 'toddler') {
+          setToddlerContent(result.content);
+        } else {
+          setPrimaryContent(result.content);
+        }
+      } else {
+        throw new Error('API返回错误');
+      }
+
+    } catch (err) {
+      console.error(`生成${type}内容时出错:`, err);
+      setError(err instanceof Error ? err.message : '未知错误');
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  // 重新生成当前段落内容（幼儿段或小学段）
+  const handleRegenerateSegment = async () => {
+    if (activeTab !== 'toddler' && activeTab !== 'primary') return;
+    
+    console.log(`重新生成${activeTab === 'toddler' ? '幼儿段' : '小学段'}内容`);
+    await handleGenerateSegmentContent(activeTab as ContentType);
+  };
+
+  // 名人名言模式：生成内容
+  const handleGenerateQuoteContent = async () => {
+    if (!quoteType) return;
+    
+    setIsGenerating(true);
+    setError(null);
+
+    try {
+      console.log(`生成名人名言，场景: ${quoteType}，条数:`, quoteCount);
+
+      const response = await fetch('/api/generate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          type: 'quote',
+          quoteType: quoteType,
+          count: quoteCount
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || '生成名人名言失败');
+      }
+
+      const result = await response.json();
+      
+      if (result.success) {
+        // 将场景类型信息也保存到内容中
+        const contentWithType = {
+          ...result.content,
+          quoteType: quoteType  // 保存当前选择的场景类型
+        };
+        
+        // 根据不同场景保存到不同的状态
+        if (quoteType === 'morning') {
+          setQuoteMorningContent(contentWithType);
+        } else if (quoteType === 'toddler') {
+          setQuoteToddlerContent(contentWithType);
+        } else if (quoteType === 'primary') {
+          setQuotePrimaryContent(contentWithType);
+        }
+      } else {
+        throw new Error('API返回错误');
+      }
+
+    } catch (err) {
+      console.error('生成名人名言时出错:', err);
+      setError(err instanceof Error ? err.message : '未知错误');
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  // 重新生成名人名言
+  const handleRegenerateQuote = async () => {
+    if (activeTab !== 'quote') return;
+    
+    console.log(`重新生成名人名言，场景: ${quoteType}`);
+    await handleGenerateQuoteContent();
+  };
+
+  // 早安语模式：重新生成某列
+  const handleRegenerateColumn = async (date: string, column: ColumnType) => {
+    setRegeneratingState({ date, column });
+    setError(null);
+
+    try {
+      const response = await fetch('/api/generate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          type: 'morning',
+          dates: [date],
+          regenerate_column: column
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `重新生成失败`);
+      }
+      
+      const result = await response.json();
+
+      if (result.success) {
+        setMorningContents(prevContents => 
+          prevContents.map(item => {
+            if (item.date === result.date) {
+              const updatedContent = {
+                ...item.content,
+                [`${result.column}_copies`]: result.copies
+              };
+              return { ...item, content: updatedContent };
+            }
+            return item;
+          })
+        );
+      } else {
+        throw new Error('API返回错误');
+      }
+
+    } catch (err) {
+      console.error('重新生成内容时出错:', err);
+      setError(err instanceof Error ? err.message : '未知错误');
+    } finally {
+      setRegeneratingState(null);
+    }
+  };
+
+  // 渲染左侧栏
+  const renderLeftSidebar = () => {
+    if (activeTab === 'morning') {
+      return (
         <LeftSidebar 
           selectedDates={selectedDates}
           onDatesChange={handleDatesChange}
-          onGenerateContent={handleGenerateContent}
+          onGenerateContent={handleGenerateMorningContent}
           isGenerating={isGenerating}
           error={error}
         />
-        
-        {/* 中间主内容区 */}
-        <MainContent 
-          generatedContents={generatedContents}
+      );
+    } else if (activeTab === 'quote') {
+      return (
+        <QuoteSelector
+          selectedType={quoteType}
+          onTypeSelect={setQuoteType}
+          count={quoteCount}
+          onCountChange={setQuoteCount}
+          onGenerateContent={handleGenerateQuoteContent}
           isGenerating={isGenerating}
-          selectedContent={selectedContent}
-          onContentSelect={handleContentSelect}
-          selectedImages={selectedImages}
+          error={error}
         />
+      );
+    } else {
+      return (
+        <CountSelector
+          contentType={activeTab as ContentType}
+          selectedCount={activeTab === 'toddler' ? toddlerCount : primaryCount}
+          onCountChange={(count) => {
+            if (activeTab === 'toddler') {
+              setToddlerCount(count);
+            } else {
+              setPrimaryCount(count);
+            }
+          }}
+          onGenerateContent={() => handleGenerateSegmentContent(activeTab as ContentType)}
+          isGenerating={isGenerating}
+          error={error}
+        />
+      );
+    }
+  };
+
+
+  // 渲染主内容区
+  const renderMainContent = () => {
+    if (activeTab === 'morning') {
+      // 转换数据格式以兼容原有的MainContent组件
+      const legacyContents = morningContents.map(item => ({
+        date: item.date,
+        context: item.context,
+        content: {
+          morning_copies: item.content.morning_copies,
+          toddler_copies: [],
+          primary_copies: []
+        }
+      }));
+
+      return (
+        <MainContent 
+          generatedContents={legacyContents}
+          isGenerating={isGenerating}
+          regeneratingState={regeneratingState}
+          onRegenerateColumn={handleRegenerateColumn}
+          selectedContent={selectedMorningContent ? {
+            date: selectedMorningContent.date,
+            context: selectedMorningContent.context,
+            content: {
+              morning_copies: selectedMorningContent.content.morning_copies,
+              toddler_copies: [],
+              primary_copies: []
+            }
+          } : null}
+          onContentSelect={(content) => {
+            const morningItem = morningContents.find(item => item.date === content.date);
+            if (morningItem) {
+              handleMorningContentSelect(morningItem);
+            }
+          }}
+          mode="morning"
+        />
+      );
+    } else if (activeTab === 'quote') {
+      // 名人名言模式 - 根据选择的场景显示对应的内容
+      const currentQuoteContent = quoteType === 'morning' ? quoteMorningContent :
+                                  quoteType === 'toddler' ? quoteToddlerContent :
+                                  quoteType === 'primary' ? quotePrimaryContent : null;
+      
+      return (
+        <MainContent 
+          generatedContents={[]}
+          isGenerating={isGenerating}
+          segmentContent={currentQuoteContent}
+          mode="quote"
+          onRegenerateSegment={handleRegenerateQuote}
+        />
+      );
+    } else {
+      // 幼儿段和小学段的专门显示组件
+      const currentContent = activeTab === 'toddler' ? toddlerContent : primaryContent;
+      
+      return (
+        <MainContent 
+          generatedContents={[]}
+          isGenerating={isGenerating}
+          segmentContent={currentContent}
+          mode={activeTab}
+          onRegenerateSegment={handleRegenerateSegment}
+        />
+      );
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-gray-100 flex flex-col">
+      {/* 页头 */}
+      <Header activeTab={activeTab} onTabChange={handleTabChange} />
+      
+      {/* 主要工作区 - 两栏布局 */}
+      <div className="flex flex-1 overflow-hidden">
+        {/* 左侧栏 */}
+        {renderLeftSidebar()}
         
-        {/* 右侧栏 */}
-        <RightSidebar 
-          selectedContent={selectedContent}
-          selectedImageId={selectedContent ? selectedImages[selectedContent.date] : undefined}
-          onImageSelect={handleImageSelect}
-        />
+        {/* 主内容区 */}
+        {renderMainContent()}
       </div>
+
+      {/* 页脚 */}
+      <Footer />
     </div>
   );
 }

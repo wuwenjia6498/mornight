@@ -1,21 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server';
+import solarlunar from 'solarlunar';
 
 interface GenerateRequest {
-  dates: string[];
+  type: 'morning' | 'toddler' | 'primary' | 'quote';
+  dates?: string[];
+  count?: number;
+  quoteType?: 'morning' | 'toddler' | 'primary';  // 名人名言的应用场景
+  regenerate_column?: 'morning' | 'toddler' | 'primary';
 }
 
 interface GeneratedContent {
-  emotional_copy: string;
-  cognitive_copy: string;
-  practical_copy: string;
-  keywords_for_image_search: string[];
+  morning_copies: string[];
+  toddler_copies: string[];
+  primary_copies: string[];
 }
 
-interface ImageOption {
-  id: string;
-  url: string;
-  title?: string;
-  description?: string;
+// 幼儿段/小学段生成内容结构
+interface SegmentContent {
+  copies: string[];
+  quote_index: number; // 名人名言的索引位置
 }
 
 interface ApiResponse {
@@ -29,10 +32,9 @@ interface ApiResponse {
     weekday: string;
   };
   content: GeneratedContent;
-  image_options: ImageOption[];
 }
 
-// aihubmix平台的API配置
+// aihubmixmix平台的API配置
 const AIHUBMIX_API_URL = process.env.AIHUBMIX_API_URL || 'https://api.aihubmix.com/v1/chat/completions';
 
 // 获取日期上下文信息
@@ -81,8 +83,19 @@ function getDateContext(dateString: string) {
   else if (month === 9 && day >= 22 && day <= 24) solarTerm = '秋分';
   else if (month === 12 && day >= 21 && day <= 23) solarTerm = '冬至';
 
-  // 简单的节日判断
-  let festival;
+  // 使用 solarlunar 库获取农历和传统节日
+  let lunarData;
+  try {
+    lunarData = solarlunar.solar2lunar(year, month, day);
+    console.log('solarlunar返回的农历数据:', lunarData);
+  } catch (lunarError) {
+    console.error('solarlunar处理失败:', lunarError);
+    // 如果农历转换失败，使用空数据继续
+    lunarData = { lMonth: 0, lDay: 0, lunarFestival: '', term: '' };
+  }
+  let festival = '';
+
+  // 优先判断公历节日
   if (month === 1 && day === 1) festival = '元旦';
   else if (month === 2 && day === 14) festival = '情人节';
   else if (month === 3 && day === 8) festival = '妇女节';
@@ -90,7 +103,23 @@ function getDateContext(dateString: string) {
   else if (month === 6 && day === 1) festival = '儿童节';
   else if (month === 10 && day === 1) festival = '国庆节';
   else if (month === 12 && day === 25) festival = '圣诞节';
-
+  // 判断农历节日
+  else if (lunarData.lMonth === 1 && lunarData.lDay === 1) festival = '春节';
+  else if (lunarData.lMonth === 1 && lunarData.lDay === 15) festival = '元宵节';
+  else if (lunarData.lMonth === 5 && lunarData.lDay === 5) festival = '端午节';
+  else if (lunarData.lMonth === 7 && lunarData.lDay === 7) festival = '七夕节';
+  else if (lunarData.lMonth === 8 && lunarData.lDay === 15) festival = '中秋节';
+  else if (lunarData.lMonth === 9 && lunarData.lDay === 9) festival = '重阳节';
+  else if (lunarData.lMonth === 12 && lunarData.lDay === 8) festival = '腊八节';
+  // 如果没有找到节日，再检查solarlunar库返回的节日
+  else if (lunarData.lunarFestival) {
+    festival = lunarData.lunarFestival;
+  }
+  // 最后，检查是否是节气
+  else if (lunarData.term) {
+    solarTerm = lunarData.term;
+  }
+  
   const result = {
     season,
     solarTerm,
@@ -107,59 +136,237 @@ function getDateContext(dateString: string) {
   return result;
 }
 
-// 生成内容的提示词
-function createPrompt(dateString: string, context: any) {
-  const contextInfo = [];
-  if (context.season) contextInfo.push(`季节：${context.season}`);
-  if (context.solarTerm) contextInfo.push(`节气：${context.solarTerm}`);
-  if (context.festival) contextInfo.push(`节日：${context.festival}`);
+// 共享的段落提示词生成函数
+function createSegmentSectionPrompt(type: 'toddler' | 'primary', count: number) {
+  const sections = {
+    toddler: `
+**## 幼儿段 (0-6岁)**
+围绕"绘本阅读"和"亲子共读"，像一位懂教育、懂妈妈的朋友，娓娓道来，创作${count}段独立的干货文案。
+**核心要求**:
+- **深度价值**: 用生活化的比喻，点明绘本如何建构幼儿的心理秩序、情感模型和认知框架。
+- **体系化建议**: 围绕某一绘本类型或阅读痛点，给出清晰、可落地的方法。
+- **核心理念**: 聚焦于保护想象力、建立安全感、语言启蒙等幼儿阅读的本质问题。
+**写作风格**: 温暖、专业且富有洞见，但要避免说教感，语言亲切、接地气。
+**格式要求**: 排版采用一句一行的形式。
+**字数限制**: 每段文案控制在 40-60 字之间。
+`,
+    primary: `
+**## 小学段**
+围绕"阅读习惯与能力提升"，提供亲切、实用的具体指导，创作${count}段独立的干货文案。
+**核心要求**:
+- **实用技巧**: 提供具体的、能解决实际痛点的阅读方法，并用简单的语言解释其原理。
+- **能力提升**: 将阅读能力与解决实际问题、提升综合素养等高阶能力相链接。
+- **亲子共读**: 给出能促进深度思维碰撞和情感链接的家庭共读策略。
+**格式要求**: 每段文案都必须遵循"**一句精辟的引入 + 一条可落地的建议**"的结构，排版采用一句一行的形式。
+**写作风格**: 专业、精炼、不说教。语言充满信任感，像与朋友分享经验。
+**字数限制**: 每段文案控制在 50-70 字之间。
+`
+  };
   
-  // 使用格式化的日期和星期
-  const displayDate = context.formattedDate || dateString;
-  contextInfo.push(`日期：${displayDate} ${context.weekday}`);
-  
-  console.log(`生成提示词 - 使用日期: ${displayDate}, 上下文信息: ${contextInfo.join('，')}`);
-
-  return `作为一名专业的儿童教育内容创作者，请为${displayDate}这一天创作儿童阅读教育文案。
-
-背景信息：${contextInfo.join('，')}
-
-请创作三种类型的文案，每种文案约100-150字：
-
-1. 情感共鸣型文案：
-- 用温暖、亲切的语言
-- 激发孩子的阅读兴趣和情感连接
-- 可以使用比喻、拟人等修辞手法
-- 营造温馨的阅读氛围
-
-2. 认知提升型文案：
-- 强调阅读对认知能力的提升
-- 包含教育价值和学习意义
-- 用科学、理性的语言
-- 突出阅读的益处
-
-3. 实用指导型文案：
-- 提供具体的阅读建议和方法
-- 包含可操作的步骤
-- 面向家长和教师
-- 实用性强
-
-4. 图片搜索关键词：
-- 提供5-8个适合的图片搜索关键词
-- 关键词要与儿童阅读、教育相关
-- 考虑季节和节日元素
-
-请严格按照以下JSON格式返回，不要包含任何其他文字：
-{
-  "emotional_copy": "情感共鸣型文案内容",
-  "cognitive_copy": "认知提升型文案内容", 
-  "practical_copy": "实用指导型文案内容",
-  "keywords_for_image_search": ["关键词1", "关键词2", "关键词3", "关键词4", "关键词5"]
-}`;
+  return sections[type];
 }
 
-// 调用aihubmix平台的Gemini API
-async function callAihubmixGemini(prompt: string): Promise<GeneratedContent> {
+// 生成幼儿段/小学段内容的提示词（恢复完整的原有提示词）
+function createSegmentPrompt(type: 'toddler' | 'primary', count: number) {
+  // 添加随机创意元素，确保每次生成不同的内容
+  const creativeElements = [
+    '从孩子的视角出发', '融入家庭温暖氛围', '结合自然元素', 
+    '加入想象力元素', '突出成长主题', '强调亲子互动',
+    '体现知识探索', '营造温馨场景', '激发好奇心',
+    '引用经典诗句', '结合生活小事', '启发哲学思考'
+  ];
+  const randomElement = creativeElements[Math.floor(Math.random() * creativeElements.length)];
+
+  // 使用共享的段落提示词
+  const task_description = createSegmentSectionPrompt(type, count);
+
+  return `请严格按照JSON格式返回，不要包含任何其他文字、解释或markdown标记。不要使用\`\`\`json\`\`\`代码块格式，直接返回纯JSON对象。
+
+**# 角色**
+你是一家深耕儿童阅读领域10余年的权威机构的**阅读推广主理人**。你既有深厚的教育理论功底，也深刻理解妈妈们在亲子阅读中的真实焦虑与困惑。你的文案总能**娓娓道来**，像与朋友分享经验一样，**亲切、实用且充满洞见**，总能说到家长的心坎里。
+
+**# 澄清**
+- **关于"诗歌形式"**: 这指的是"**一句一行**"的视觉排版，而非要求内容本身是诗歌体裁。
+
+**# 核心要求**
+1.  **专业高级**: 内容必须体现专业性，逻辑清晰、条理分明，充满知识点和实用建议。杜绝任何机器翻译或空洞的口号。
+2.  **创意元素**: 本次创作请融入"${randomElement}"的创意方向。
+3.  **严格分段**: 严格按照任务要求生成${count}段独立的文案。
+
+**# 任务：创作儿童阅读推广文案**
+---
+${task_description}
+---
+
+**# 输出格式**
+必须严格按照以下JSON格式返回，键和值都使用双引号，不要使用任何代码块标记：
+{
+  "copies": ["...", "...", "...", ...],
+  "quote_index": -1
+}
+
+请生成${count}段专业指导文案。quote_index字段固定设为-1（表示不包含名人名言）。`;
+}
+
+// 名人名言生成提示词
+function createQuotePrompt(quoteType: 'morning' | 'toddler' | 'primary', count: number) {
+  const sceneConfig = {
+    morning: {
+      scene: '早安语场景',
+      description: '适合早晨分享的温暖名人名言，结合时节、阅读与成长主题，给人以启迪和温暖',
+      examples: ['关于阅读的名言', '关于时间和早晨的名言', '关于成长和学习的名言', '关于生活态度的名言'],
+      style: '简洁温暖、富有诗意、适合早晨阅读'
+    },
+    toddler: {
+      scene: '幼儿段场景（0-6岁）',
+      description: '适合低幼儿童家长的教育名言，强调陪伴、启蒙、想象力和亲子关系',
+      examples: ['关于童年的名言', '关于想象力和创造力的名言', '关于亲子陪伴的名言', '关于早期教育的名言'],
+      style: '温馨感人、充满爱意、强调陪伴价值'
+    },
+    primary: {
+      scene: '小学段场景',
+      description: '适合小学生家长的励志名言，关注阅读能力、学习方法、独立思考和品格培养',
+      examples: ['关于读书和学习的名言', '关于毅力和坚持的名言', '关于思考和智慧的名言', '关于品格养成的名言'],
+      style: '励志向上、富有哲理、激发上进心'
+    }
+  };
+
+  const config = sceneConfig[quoteType];
+
+  return `请严格按照JSON格式返回，不要包含任何其他文字、解释或markdown标记。不要使用\`\`\`json\`\`\`代码块格式，直接返回纯JSON对象。
+
+**# 角色**
+你是一位资深的名人名言编辑，深谙各类名人名言的精髓与应用场景。你擅长为不同场景精选最合适的名人名言，并能准确把握其内涵与价值。
+
+**# 任务：精选${config.scene}名人名言**
+
+**场景说明：**
+${config.description}
+
+**筛选要求：**
+1. **真实性**: 所有名言必须是真实存在的，有据可查的名人名言，不可杜撰
+2. **适配性**: 名言必须契合"${config.scene}"的特点和需求
+3. **多样性**: 涵盖不同名人、不同角度、不同风格的名言，避免重复
+4. **可读性**: 名言长度适中，易于理解和记忆
+5. **价值性**: 每条名言都要有启发性和传播价值
+
+**风格特点：**
+${config.style}
+
+**主题参考：**
+${config.examples.join('、')}
+
+**格式要求：**
+- 每条名言格式：名言内容（一句一行，诗歌形式排版）+ 作者署名（换行后，格式：--作者名）
+- 作者署名必须准确，使用真实的名人姓名
+- 如果是中国名人，使用中文全名；外国名人可用通用译名
+
+**# 输出格式**
+必须严格按照以下JSON格式返回，键和值都使用双引号：
+{
+  "copies": [
+    "名言内容（一句一行格式）\\n--作者名",
+    "名言内容（一句一行格式）\\n--作者名",
+    ...
+  ],
+  "quote_index": ${count - 1}
+}
+
+请生成${count}条符合${config.scene}的名人名言，放在copies数组中。quote_index固定为${count - 1}（因为所有内容都是名人名言）。`;
+}
+
+// 生成早安语内容的提示词（保持原有的三段式生成方式）
+function createMorningPrompt(
+  dateString: string, 
+  context: any,
+  regenerate_column?: 'morning' | 'toddler' | 'primary'
+) {
+  const displayDate = context.formattedDate || dateString;
+
+  // 添加随机创意元素，确保每次生成不同的内容
+  const creativeElements = [
+    '从孩子的视角出发', '融入家庭温暖氛围', '结合自然元素', 
+    '加入想象力元素', '突出成长主题', '强调亲子互动',
+    '体现知识探索', '营造温馨场景', '激发好奇心',
+    '引用经典诗句', '结合生活小事', '启发哲学思考'
+  ];
+  const randomElement = creativeElements[Math.floor(Math.random() * creativeElements.length)];
+  
+  const contextLines = [`- 日期：${displayDate} ${context.weekday}`];
+  if (context.season) contextLines.push(`- 季节：${context.season}`);
+  if (context.solarTerm) contextLines.push(`- 节气：${context.solarTerm}`);
+  if (context.festival) contextLines.push(`- 节日：${context.festival}`);
+
+  console.log(`生成提示词 - 使用日期: ${displayDate}, 上下文信息: ${contextLines.join(' ')}, 创意元素: ${randomElement}`);
+
+  const sections = {
+    morning: `
+**## 早安寄语 (通用)**
+创作5段独立的早安文案。
+**核心要求**:
+- **避免俗套**: 请避免使用"早安"、"清晨"、"早餐"等直接点明时间的词汇。
+- **富有哲思**: 风格应侧重于哲理思考，可以是一个能引发回味的微小洞察，或对某个生活瞬间的深度思考。
+- **情境优先**: 如果"特殊节点"信息不是"无"，那么五段文案需要紧密围绕该节点进行创作。
+- **内容主旨**: 文案需像朋友一样，温柔地传递生活的美好与阅读的价值，为新的一天注入思考的能量。
+- **格式要求**: 排版采用一句一行的形式。
+- **字数限制**: 每段文案控制在 30-50 字之间。
+`
+  };
+
+  const json_structure = {
+    morning: `"morning_copies": ["...","...","...","...","..."]`
+  };
+
+  let task_description = '';
+  let output_format = '';
+
+  if (regenerate_column) {
+    // 早安语模式只支持重新生成早安语列
+    if (regenerate_column !== 'morning') {
+      throw new Error('早安语模式只支持重新生成早安语内容');
+    }
+    task_description = sections.morning;
+    output_format = `{ ${json_structure.morning} }`;
+  } else {
+    // 早安语模式只生成早安语内容
+    task_description = sections.morning;
+    output_format = `{ ${json_structure.morning} }`;
+  }
+
+
+  return `请严格按照JSON格式返回，不要包含任何其他文字、解释或markdown标记。不要使用\`\`\`json\`\`\`代码块格式，直接返回纯JSON对象。
+
+**# 角色**
+你是一家深耕儿童阅读领域10余年的权威机构的**阅读推广主理人**。你既有深厚的教育理论功底，也深刻理解妈妈们在亲子阅读中的真实焦虑与困惑。你的文案总能**娓娓道来**，像与朋友分享经验一样，**亲切、实用且充满洞见**，总能说到家长的心坎里。
+
+**# 澄清**
+- **关于"诗歌形式"**: 这指的是"**一句一行**"的视觉排版，而非要求内容本身是诗歌体裁。
+
+**# 背景信息**
+- 日期：${displayDate} ${context.weekday}
+- 季节：${context.season}
+- 特殊节点：${context.solarTerm || context.festival || '无'}
+
+**# 核心要求**
+1.  **专业高级**: 内容必须体现专业性，逻辑清晰、条理分明，充满知识点和实用建议。杜绝任何机器翻译或空洞的口号。
+2.  **情境感知**: 如果当天是特殊的节气或节日，请将内容与该节点自然地结合。季节信息仅作为创作基调参考。
+3.  **严格分段**: 严格按照任务要求生成5段独立的早安语文案。
+
+**# 任务：创作儿童阅读推广文案**
+---
+${task_description}
+---
+
+**# 输出格式**
+必须严格按照以下JSON格式返回，键和值都使用双引号，不要使用任何代码块标记：
+${output_format}`;
+}
+
+// 调用aihubmix平台的Gemini API生成早安语
+async function callAihubmixGeminiMorning(
+  prompt: string,
+  regenerate_column?: 'morning' | 'toddler' | 'primary'
+): Promise<Partial<GeneratedContent>> {
   console.log('调用aihubmix API，URL:', AIHUBMIX_API_URL);
   console.log('使用模型: gemini-2.5-pro');
   
@@ -171,9 +378,12 @@ async function callAihubmixGemini(prompt: string): Promise<GeneratedContent> {
         content: prompt
       }
     ],
-    temperature: 0.7,
-    max_tokens: 3000, // 增加token限制
-    stream: false // 确保不使用流式输出
+    temperature: 0.7, // 降低温度值提高稳定性
+    max_tokens: 4000, // 增加token限制
+    stream: false,
+    top_p: 0.8,
+    frequency_penalty: 0.1,
+    presence_penalty: 0.1
   };
 
   console.log('请求体:', JSON.stringify(requestBody, null, 2));
@@ -209,177 +419,462 @@ async function callAihubmixGemini(prompt: string): Promise<GeneratedContent> {
 
   const content = data.choices[0].message.content;
   console.log('AI返回的原始内容长度:', content.length);
-  console.log('AI返回的原始内容前200字符:', content.substring(0, 200));
+  console.log('AI返回的原始内容:', content);
   
-  try {
-    // 多种方式清理响应文本
-    let cleanText = content;
-    
-    // 移除markdown代码块标记
-    cleanText = cleanText.replace(/```json\s*/g, '').replace(/```\s*/g, '');
-    
-    // 移除开头和结尾的空白字符
-    cleanText = cleanText.trim();
-    
-    // 如果内容被截断，尝试修复JSON
-    if (!cleanText.endsWith('}') && !cleanText.endsWith('}```')) {
-      console.log('检测到JSON可能被截断，尝试修复...');
-      
-      // 尝试找到最后一个完整的字段
-      const lastCompleteField = cleanText.lastIndexOf('",');
-      if (lastCompleteField > 0) {
-        cleanText = cleanText.substring(0, lastCompleteField + 1) + '\n  "keywords_for_image_search": ["儿童阅读", "亲子时光", "书本", "学习", "教育"]\n}';
-        console.log('尝试修复后的JSON:', cleanText);
-      }
-    }
-    
-    console.log('清理后的内容:', cleanText);
-    
-    const parsed = JSON.parse(cleanText);
-    console.log('JSON解析成功');
-    
-    // 验证必需字段
-    if (!parsed.emotional_copy || !parsed.cognitive_copy || !parsed.practical_copy) {
-      throw new Error('JSON缺少必需字段');
-    }
-    
-    return parsed;
-  } catch (parseError) {
-    console.error('JSON解析失败，原始内容:', content);
-    console.error('解析错误:', parseError);
-    
-    // 如果解析失败，尝试提取部分内容
-    try {
-      const partialContent = extractPartialContent(content);
-      if (partialContent) {
-        console.log('使用部分提取的内容');
-        return partialContent;
-      }
-    } catch (extractError) {
-      console.error('部分内容提取也失败:', extractError);
-    }
-    
+  // 简单清理并解析JSON - 采用多策略尝试
+  const parsed = parseAIResponse(content, regenerate_column);
+  
+  if (!parsed) {
+    console.error('所有解析策略都失败了');
     throw new Error('AI返回内容格式错误，无法解析JSON');
   }
+  
+  console.log('JSON解析成功');
+  return parsed;
 }
 
-// 尝试从不完整的响应中提取部分内容
+// 新增：简单的JSON解析函数，采用多种策略
+function parseAIResponse(content: string, regenerate_column?: string): any {
+  // 策略1：直接解析（AI返回了正确的JSON）
+  try {
+    console.log('策略1: 尝试直接解析...');
+    const parsed = JSON.parse(content);
+    if (validateParsedContent(parsed, regenerate_column)) {
+      console.log('策略1成功');
+      return parsed;
+    }
+  } catch (e) {
+    console.log('策略1失败:', e instanceof Error ? e.message : String(e));
+  }
+
+  // 策略2：提取JSON并直接解析
+  try {
+    console.log('策略2: 提取JSON部分...');
+    let cleaned = content.trim();
+    
+    // 移除markdown代码块
+    cleaned = cleaned.replace(/```json\s*/gi, '').replace(/```\s*/g, '');
+    
+    // 提取 { } 之间的内容
+    const start = cleaned.indexOf('{');
+    const end = cleaned.lastIndexOf('}');
+    if (start !== -1 && end !== -1 && end > start) {
+      cleaned = cleaned.substring(start, end + 1);
+      const parsed = JSON.parse(cleaned);
+      if (validateParsedContent(parsed, regenerate_column)) {
+        console.log('策略2成功');
+        return parsed;
+      }
+    }
+  } catch (e) {
+    console.log('策略2失败:', e instanceof Error ? e.message : String(e));
+  }
+
+  // 策略3：转义所有换行符后解析（处理未转义的换行符）
+  try {
+    console.log('策略3: 转义换行符...');
+    let cleaned = content.trim();
+    cleaned = cleaned.replace(/```json\s*/gi, '').replace(/```\s*/g, '');
+    
+    const start = cleaned.indexOf('{');
+    const end = cleaned.lastIndexOf('}');
+    if (start !== -1 && end !== -1 && end > start) {
+      cleaned = cleaned.substring(start, end + 1);
+      
+      // 简单粗暴：将所有真实换行符替换为\n（可能不完美但通常有效）
+      cleaned = cleaned
+        .replace(/\r\n/g, '\\n')
+        .replace(/\r/g, '\\n')
+        .replace(/\n/g, '\\n');
+      
+      const parsed = JSON.parse(cleaned);
+      if (validateParsedContent(parsed, regenerate_column)) {
+        console.log('策略3成功');
+        return parsed;
+      }
+    }
+  } catch (e) {
+    console.log('策略3失败:', e instanceof Error ? e.message : String(e));
+  }
+
+  // 策略4：使用容错解析
+  try {
+    console.log('策略4: 容错解析...');
+    const partial = extractPartialContent(content);
+    if (partial && validateParsedContent(partial, regenerate_column)) {
+      console.log('策略4成功');
+      return partial;
+    }
+  } catch (e) {
+    console.log('策略4失败:', e instanceof Error ? e.message : String(e));
+  }
+
+  return null;
+}
+
+// 新增：验证解析后的内容是否符合要求
+function validateParsedContent(parsed: any, regenerate_column?: string): boolean {
+  if (!parsed) return false;
+  
+  const validators: Record<string, (p: any) => boolean> = {
+    morning: (p: any) => p.morning_copies && Array.isArray(p.morning_copies) && p.morning_copies.length === 5,
+    toddler: (p: any) => p.toddler_copies && Array.isArray(p.toddler_copies) && p.toddler_copies.length === 4,
+    primary: (p: any) => p.primary_copies && Array.isArray(p.primary_copies) && p.primary_copies.length === 4,
+  };
+
+  if (regenerate_column) {
+    return validators[regenerate_column]?.(parsed) || false;
+  } else {
+    // 早安语模式，只需要 morning_copies
+    return validators.morning(parsed);
+  }
+}
+
+// 尝试从不完整的响应中提取部分内容（简化版）
 function extractPartialContent(content: string): GeneratedContent | null {
   try {
-    // 使用正则表达式提取各个字段
-    const emotionalMatch = content.match(/"emotional_copy":\s*"([^"]*(?:\\.[^"]*)*)"/);
-    const cognitiveMatch = content.match(/"cognitive_copy":\s*"([^"]*(?:\\.[^"]*)*)"/);
-    const practicalMatch = content.match(/"practical_copy":\s*"([^"]*(?:\\.[^"]*)*)"/);
+    let fixed = content.trim();
     
-    if (emotionalMatch && cognitiveMatch && practicalMatch) {
-      return {
-        emotional_copy: emotionalMatch[1].replace(/\\"/g, '"'),
-        cognitive_copy: cognitiveMatch[1].replace(/\\"/g, '"'),
-        practical_copy: practicalMatch[1].replace(/\\"/g, '"'),
-        keywords_for_image_search: ['儿童阅读', '亲子时光', '书本', '学习', '教育']
-      };
-    }
+    // 移除markdown
+    fixed = fixed.replace(/```json\s*/gi, '').replace(/```\s*/g, '');
     
-    return null;
-  } catch (error) {
+    // 提取JSON
+    const start = fixed.indexOf('{');
+    const end = fixed.lastIndexOf('}');
+    if (start === -1 || end === -1 || end <= start) return null;
+    
+    fixed = fixed.substring(start, end + 1);
+    
+    // 转义换行符
+    fixed = fixed.replace(/\r\n/g, '\\n').replace(/\r/g, '\\n').replace(/\n/g, '\\n');
+    
+    return JSON.parse(fixed);
+  } catch (e) {
     return null;
   }
 }
 
-// 生成示例图片选项
-function generateImageOptions(keywords: string[]): ImageOption[] {
-  const baseImages = [
-    'https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=400',
-    'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400',
-    'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=400',
-    'https://images.unsplash.com/photo-1516979187457-637abb4f9353?w=400',
-    'https://images.unsplash.com/photo-1503676260728-1c00da094a0b?w=400',
-    'https://images.unsplash.com/photo-1606092195730-5d7b9af1efc5?w=400',
-    'https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=400&h=400&fit=crop',
-    'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=400'
-  ];
+// 调用aihubmix平台的Gemini API生成幼儿段/小学段内容
+async function callAihubmixGeminiSegment(prompt: string): Promise<SegmentContent> {
+  console.log('调用aihubmix API生成段落内容，URL:', AIHUBMIX_API_URL);
+  console.log('使用模型: gemini-2.5-pro');
+  
+  const requestBody = {
+    model: 'gemini-2.5-pro',
+    messages: [
+      {
+        role: 'user',
+        content: prompt
+      }
+    ],
+    temperature: 0.7,
+    max_tokens: 4000,
+    stream: false,
+    top_p: 0.8,
+    frequency_penalty: 0.1,
+    presence_penalty: 0.1
+  };
 
-  return baseImages.slice(0, 5).map((url, index) => ({
-    id: `img_${Date.now()}_${index}`,
-    url,
-    title: `${keywords[index % keywords.length]}主题配图`,
-    description: `适合${keywords[index % keywords.length]}的儿童阅读场景`
-  }));
+  console.log('段落生成请求体:', JSON.stringify(requestBody, null, 2));
+  
+  const response = await fetch(AIHUBMIX_API_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${process.env.GEMINI_API_KEY}`,
+    },
+    body: JSON.stringify(requestBody),
+  });
+
+  console.log('段落生成API响应状态:', response.status);
+
+  if (!response.ok) {
+    const errorData = await response.text();
+    console.error('段落生成API调用失败:', response.status, errorData);
+    throw new Error(`API调用失败: ${response.status} ${response.statusText} - ${errorData}`);
+  }
+
+  const data = await response.json();
+  console.log('段落生成API返回完整数据:', JSON.stringify(data, null, 2));
+  console.log('段落生成API返回数据结构:', {
+    hasChoices: !!data.choices,
+    choicesLength: data.choices?.length,
+    firstChoice: data.choices?.[0] ? 'exists' : 'missing',
+    hasMessage: !!data.choices?.[0]?.message,
+    messageContent: data.choices?.[0]?.message?.content ? 'exists' : 'missing'
+  });
+
+  if (!data.choices || !data.choices[0] || !data.choices[0].message) {
+    console.error('段落生成API返回数据格式错误:', data);
+    throw new Error('API返回数据格式错误');
+  }
+
+  const content = data.choices[0].message.content;
+  console.log('AI返回的段落内容长度:', content?.length || 0);
+  console.log('AI返回的段落内容:', content);
+  
+  // 检查内容是否为空
+  if (!content || content.trim() === '') {
+    console.error('API返回空内容:', data);
+    throw new Error('API返回空内容，请检查API配置和网络连接');
+  }
+  
+  // 使用简化的解析策略
+  const parsed = parseSegmentResponse(content);
+  
+  if (!parsed) {
+    console.error('所有解析策略都失败了');
+    throw new Error('AI返回内容格式错误，无法解析JSON');
+  }
+  
+  // 验证必需字段
+  if (!parsed.copies || !Array.isArray(parsed.copies) || typeof parsed.quote_index !== 'number') {
+    throw new Error('JSON缺少必需字段或格式错误');
+  }
+
+  // quote_index 可以是 -1（表示不包含名人名言）或有效的索引位置
+  if (parsed.quote_index !== -1 && (parsed.quote_index < 0 || parsed.quote_index >= parsed.copies.length)) {
+    throw new Error('quote_index超出范围');
+  }
+  
+  console.log('段落JSON解析成功');
+  return parsed as SegmentContent;
 }
 
+// 新增：段落内容的简单解析函数
+function parseSegmentResponse(content: string): any {
+  // 策略1：直接解析
+  try {
+    console.log('段落策略1: 直接解析...');
+    return JSON.parse(content);
+  } catch (e) {
+    console.log('段落策略1失败');
+  }
+
+  // 策略2：提取并解析
+  try {
+    console.log('段落策略2: 提取JSON...');
+    let cleaned = content.trim().replace(/```json\s*/gi, '').replace(/```\s*/g, '');
+    const start = cleaned.indexOf('{');
+    const end = cleaned.lastIndexOf('}');
+    if (start !== -1 && end !== -1 && end > start) {
+      cleaned = cleaned.substring(start, end + 1);
+      return JSON.parse(cleaned);
+    }
+  } catch (e) {
+    console.log('段落策略2失败');
+  }
+
+  // 策略3：转义换行符
+  try {
+    console.log('段落策略3: 转义换行符...');
+    let cleaned = content.trim().replace(/```json\s*/gi, '').replace(/```\s*/g, '');
+    const start = cleaned.indexOf('{');
+    const end = cleaned.lastIndexOf('}');
+    if (start !== -1 && end !== -1 && end > start) {
+      cleaned = cleaned.substring(start, end + 1);
+      cleaned = cleaned.replace(/\r\n/g, '\\n').replace(/\r/g, '\\n').replace(/\n/g, '\\n');
+      return JSON.parse(cleaned);
+    }
+  } catch (e) {
+    console.log('段落策略3失败');
+  }
+
+  return null;
+}
+
+
 export async function POST(request: NextRequest) {
+  console.log('=== API调用开始 ===');
   try {
     const body: GenerateRequest = await request.json();
-    const { dates } = body;
+    const { type, dates, count, regenerate_column } = body;
+    console.log('接收到的请求:', body);
 
-    if (!dates || dates.length === 0) {
+    // 验证请求参数
+    if (!type) {
+      console.log('错误: 未提供生成类型');
       return NextResponse.json(
-        { success: false, error: '请提供至少一个日期' },
+        { success: false, error: '请提供生成类型' },
         { status: 400 }
       );
     }
 
+    if (type === 'morning' && (!dates || dates.length === 0)) {
+      console.log('错误: 早安语模式未提供日期');
+      return NextResponse.json(
+        { success: false, error: '早安语模式请提供至少一个日期' },
+        { status: 400 }
+      );
+    }
+
+    if ((type === 'toddler' || type === 'primary') && (!count || count < 1)) {
+      console.log('错误: 幼儿段/小学段模式未提供有效条数');
+      return NextResponse.json(
+        { success: false, error: '请提供有效的生成条数' },
+        { status: 400 }
+      );
+    }
+
+    if (type === 'quote' && (!count || count < 1 || !body.quoteType)) {
+      console.log('错误: 名人名言模式参数无效');
+      return NextResponse.json(
+        { success: false, error: '请提供有效的生成条数和应用场景' },
+        { status: 400 }
+      );
+    }
+
+    console.log('检查环境变量...');
+    console.log('GEMINI_API_KEY存在:', !!process.env.GEMINI_API_KEY);
+    console.log('AIHUBMIX_API_URL:', process.env.AIHUBMIX_API_URL);
+    
     if (!process.env.GEMINI_API_KEY) {
+      console.log('错误: Gemini API密钥未配置');
       return NextResponse.json(
         { success: false, error: 'Gemini API密钥未配置' },
         { status: 500 }
       );
     }
 
-    const results: ApiResponse[] = [];
-
-    for (const dateString of dates) {
+    // 处理名人名言生成
+    if (type === 'quote') {
       try {
-        const context = getDateContext(dateString);
-        const prompt = createPrompt(dateString, context);
-
-        console.log(`正在为 ${dateString} 生成内容...`);
+        console.log(`正在生成名人名言，场景: ${body.quoteType}，条数: ${count}`);
+        const prompt = createQuotePrompt(body.quoteType!, count!);
+        const content = await callAihubmixGeminiSegment(prompt);
         
-        // 调用aihubmix平台的Gemini API
-        let content: GeneratedContent;
-        try {
-          content = await callAihubmixGemini(prompt);
-        } catch (apiError) {
-          console.error('API调用失败，使用默认内容:', apiError);
-          // 如果API调用失败，使用默认内容
-          content = {
-            emotional_copy: `在这个特别的日子里，让我们一起翻开书页，感受知识的魅力。每一个故事都是一扇通往奇妙世界的门，每一次阅读都是一次心灵的旅行。亲爱的孩子们，准备好和我一起探索书中的精彩世界了吗？`,
-            cognitive_copy: `阅读是提升认知能力的最佳方式之一。通过阅读，孩子们可以扩展词汇量、提高理解能力、培养批判性思维。研究表明，经常阅读的儿童在语言表达、逻辑推理和创造性思维方面都有显著优势。让我们把阅读变成孩子成长路上最重要的伙伴。`,
-            practical_copy: `【今日阅读指导】1. 选择适合孩子年龄的读物；2. 创造安静舒适的阅读环境；3. 陪伴孩子阅读15-30分钟；4. 阅读后与孩子讨论故事内容；5. 鼓励孩子表达自己的想法和感受。记住，家长的陪伴和引导是培养阅读习惯的关键。`,
-            keywords_for_image_search: ['儿童阅读', '亲子时光', '书本', '学习', '教育']
-          };
-        }
-
-        // 生成图片选项
-        const imageOptions = generateImageOptions(content.keywords_for_image_search);
-
-        results.push({
-          date: dateString,
-          context,
-          content,
-          image_options: imageOptions
+        console.log(`✅ 名人名言生成完成`);
+        
+        return NextResponse.json({
+          success: true,
+          content: {
+            type: 'quote',
+            content: content
+          }
         });
 
-        console.log(`${dateString} 内容生成完成`);
-
-      } catch (dateError) {
-        console.error(`处理日期 ${dateString} 时出错:`, dateError);
-        // 继续处理其他日期，不中断整个流程
-        continue;
+      } catch (e) {
+        console.error('生成名人名言时出错:', e);
+        return NextResponse.json(
+          { success: false, error: '生成名人名言失败' },
+          { status: 500 }
+        );
       }
     }
 
-    if (results.length === 0) {
-      return NextResponse.json(
-        { success: false, error: '所有日期处理失败' },
-        { status: 500 }
-      );
+    // 处理幼儿段/小学段生成
+    if (type === 'toddler' || type === 'primary') {
+      try {
+        console.log(`正在生成${type === 'toddler' ? '幼儿段' : '小学段'}内容，条数: ${count}`);
+        const prompt = createSegmentPrompt(type, count!);
+        const content = await callAihubmixGeminiSegment(prompt);
+        
+        console.log(`✅ ${type === 'toddler' ? '幼儿段' : '小学段'}内容生成完成`);
+        
+        return NextResponse.json({
+          success: true,
+          content: {
+            type: type,
+            content: content
+          }
+        });
+
+      } catch (e) {
+        console.error(`生成${type === 'toddler' ? '幼儿段' : '小学段'}内容时出错:`, e);
+        return NextResponse.json(
+          { success: false, error: `生成${type === 'toddler' ? '幼儿段' : '小学段'}内容失败` },
+          { status: 500 }
+        );
+      }
     }
 
-    return NextResponse.json({
-      success: true,
-      data: results
-    });
+    // 处理早安语分列再生逻辑
+    if (type === 'morning' && regenerate_column && dates && dates.length === 1) {
+      const dateString = dates[0];
+      try {
+        console.log(`正在为 ${dateString} 重新生成 ${regenerate_column} 列...`);
+        const context = getDateContext(dateString);
+        const prompt = createMorningPrompt(dateString, context, regenerate_column);
+        const content = await callAihubmixGeminiMorning(prompt, regenerate_column);
+        
+        console.log(`✅ ${dateString} ${regenerate_column} 列重新生成完成`);
+        
+        return NextResponse.json({
+          success: true,
+          date: dateString,
+          column: regenerate_column,
+          copies: content[`${regenerate_column}_copies` as keyof GeneratedContent]
+        });
+
+      } catch (e) {
+        console.error(`处理日期 ${dateString} 的再生请求时出错:`, e);
+        return NextResponse.json(
+          { success: false, error: `重新生成 ${dateString} 失败` },
+          { status: 500 }
+        );
+      }
+    }
+
+
+    // 处理早安语批量生成
+    if (type === 'morning' && dates && dates.length > 0) {
+      const results: ApiResponse[] = [];
+      const errors: string[] = [];
+
+      for (const dateString of dates) {
+        try {
+          const context = getDateContext(dateString);
+          const prompt = createMorningPrompt(dateString, context);
+
+          console.log(`正在为 ${dateString} 生成早安语内容...`);
+          
+          // 调用AI生成内容
+          const content = await callAihubmixGeminiMorning(prompt) as GeneratedContent;
+
+          console.log(`✅ ${dateString} 早安语内容生成完成`);
+
+          results.push({
+            date: dateString,
+            context,
+            content
+          });
+
+        } catch (dateError) {
+          const errorMsg = dateError instanceof Error ? dateError.message : String(dateError);
+          console.error(`处理日期 ${dateString} 时出错:`, dateError);
+          console.error('错误详情:', {
+            message: errorMsg,
+            stack: dateError instanceof Error ? dateError.stack : undefined,
+            dateString
+          });
+          errors.push(`${dateString}: ${errorMsg}`);
+          // 继续处理其他日期，不中断整个流程
+          continue;
+        }
+      }
+
+      if (results.length === 0) {
+        const detailedError = errors.length > 0 
+          ? `所有日期处理失败。详细错误：${errors.join('; ')}`
+          : '所有日期处理失败';
+        console.error('批量处理完全失败，错误列表:', errors);
+        return NextResponse.json(
+          { success: false, error: detailedError },
+          { status: 500 }
+        );
+      }
+
+      return NextResponse.json({
+        success: true,
+        results: results
+      });
+    }
+
+    // 如果没有匹配的处理逻辑，返回错误
+    return NextResponse.json(
+      { success: false, error: '无效的请求参数' },
+      { status: 400 }
+    );
 
   } catch (error) {
     console.error('API调用失败:', error);
@@ -388,4 +883,4 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-} 
+}

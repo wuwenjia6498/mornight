@@ -40,6 +40,14 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
+  
+  /* 自定义品牌蓝色 - 基于用户提供的色标 */
+  --color-brand-blue-50: #eef7fc;
+  --color-brand-blue-100: #ddf0f9;
+  --color-brand-blue-200: #cce9f7;
+  --color-brand-blue-500: #0077be;
+  --color-brand-blue-600: #005fa3;
+  --color-brand-blue-700: #004778;
 }
 
 :root {

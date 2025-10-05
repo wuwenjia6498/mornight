@@ -97,11 +97,7 @@ export default function LeftSidebar({
   };
 
   return (
-    <div className="w-96 bg-gray-50 border-r border-gray-200 p-6 flex flex-col gap-5 overflow-y-auto">
-      {/* 标题 */}
-      <div className="text-2xl font-bold text-gray-800 mb-3">
-        内容生成控制台
-      </div>
+    <div className="w-[420px] bg-gray-50 border-r border-gray-200 p-6 flex flex-col gap-5 overflow-y-auto">
       
       {/* 日期选择器卡片 */}
       <Card>
@@ -157,7 +153,7 @@ export default function LeftSidebar({
               selected: selectedDates
             }}
             modifiersClassNames={{
-              selected: 'bg-blue-500 text-white hover:bg-blue-600'
+              selected: 'bg-brand-blue-100 text-brand-blue-700 hover:bg-brand-blue-200'
             }}
           />
           
@@ -185,7 +181,7 @@ export default function LeftSidebar({
                   .map((date, index) => (
                     <div
                       key={index}
-                      className="flex items-center justify-between bg-blue-50 text-blue-700 px-3 py-2 rounded-lg text-sm"
+                      className="flex items-center justify-between bg-brand-blue-50 text-brand-blue-700 px-3 py-2 rounded-lg text-sm"
                     >
                       <span>
                         {formatDate(date)}
@@ -194,7 +190,7 @@ export default function LeftSidebar({
                         variant="ghost"
                         size="sm"
                         onClick={() => handleRemoveDate(date)}
-                        className="h-auto p-1 text-blue-700 hover:text-blue-900 hover:bg-blue-100"
+                        className="h-auto p-1 text-brand-blue-700 hover:text-brand-blue-700 hover:bg-brand-blue-100"
                         disabled={isGenerating}
                       >
                         <X className="w-4 h-4" />
@@ -224,7 +220,7 @@ export default function LeftSidebar({
         <Button
           onClick={onGenerateContent}
           disabled={selectedDates.length === 0 || isGenerating}
-          className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium text-base py-3"
+          className="w-full bg-brand-blue-600 hover:bg-brand-blue-700 text-white font-medium text-base py-3"
           size="lg"
         >
           {isGenerating ? (
@@ -236,7 +232,7 @@ export default function LeftSidebar({
             <>
               生成内容
               {selectedDates.length > 0 && (
-                <span className="ml-2 bg-blue-500 text-white px-3 py-1 rounded-full text-sm">
+                <span className="ml-2 bg-brand-blue-500 text-white px-3 py-1 rounded-full text-sm">
                   {selectedDates.length}
                 </span>
               )}
@@ -251,7 +247,7 @@ export default function LeftSidebar({
         )}
         
         {isGenerating && (
-          <p className="text-sm text-blue-600 text-center mt-3">
+          <p className="text-sm text-brand-blue-600 text-center mt-3">
             正在为 {selectedDates.length} 个日期生成内容...
           </p>
         )}
