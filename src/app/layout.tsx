@@ -19,6 +19,14 @@ export const metadata: Metadata = {
     maximumScale: 5,
     userScalable: true,
   },
+  icons: {
+    icon: [
+      { url: '/favicon.ico', sizes: 'any' },
+    ],
+    apple: [
+      { url: '/favicon.ico' },
+    ],
+  },
 };
 
 export default function RootLayout({
