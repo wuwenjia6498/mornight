@@ -213,9 +213,9 @@ function createQuotePrompt(quoteType: 'morning' | 'toddler' | 'primary', count: 
   const sceneConfig = {
     morning: {
       scene: '早安语场景',
-      description: '适合早晨分享的温暖名人名言，结合时节、阅读与成长主题，给人以启迪和温暖',
-      examples: ['关于阅读的名言', '关于时间和早晨的名言', '关于成长和学习的名言', '关于生活态度的名言'],
-      style: '简洁温暖、富有诗意、适合早晨阅读'
+      description: '适合早晨分享的温暖名人名言，结合时节、阅读与成长主题，给人以启迪和温暖，兼具哲思深度',
+      examples: ['关于阅读的名言', '关于时间和早晨的名言', '关于成长和学习的名言', '关于生活态度的名言', '关于人生哲理的名言', '关于思考与智慧的名言'],
+      style: '简洁温暖、富有诗意、适合早晨阅读、兼具哲思深度'
     },
     toddler: {
       scene: '幼儿段场景（0-6岁）',
