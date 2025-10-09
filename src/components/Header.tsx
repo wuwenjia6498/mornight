@@ -63,8 +63,9 @@ export default function Header({ activeTab, onTabChange }: HeaderProps) {
           </Tabs>
         </div>
 
-        {/* 右上角外链 */}
-        <div className="flex items-center mr-12">
+        {/* 右上角操作区 */}
+        <div className="flex items-center gap-3 mr-12">
+          {/* 去配图外链 */}
           <a
             href="https://image.skyline666.top/"
             target="_blank"

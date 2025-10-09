@@ -108,14 +108,11 @@ export default function MainContent({
   };
 
 
-  // 批量导出功能
+  // 批量导出功能（早安语）
   const handleBatchExport = async () => {
     if (generatedContents.length === 0) {
-      console.error('没有可导出的内容');
       return;
     }
-
-    console.info('开始准备导出文件...');
     
     try {
       const zip = new JSZip();
@@ -126,7 +123,7 @@ export default function MainContent({
         
         if (!folder) continue;
 
-        // 创建内容文本文件
+        // 创建早安语内容文本文件
         const contentText = `日期：${formatDate(item.date)}
 上下文：${getContextDescription(item.context)}
 
@@ -135,24 +132,10 @@ export default function MainContent({
 ==============================
 
 ${item.content.morning_copies.map((copy, i) => `${i + 1}. ${copy}`).join('\n\n')}
-
-==============================
-  幼儿段 (0-6岁)
-==============================
-
-${item.content.toddler_copies.map((copy, i) => `${i + 1}. ${copy}`).join('\n\n')}
-
-==============================
-  小学段
-==============================
-
-${item.content.primary_copies.map((copy, i) => `${i + 1}. ${copy}`).join('\n\n')}
 `;
 
-        folder.file('content.txt', contentText);
+        folder.file('早安语.txt', contentText);
       }
-
-      console.info('正在生成压缩文件...');
       
       // 生成zip文件
       const zipBlob = await zip.generateAsync({ type: 'blob' });
@@ -161,7 +144,7 @@ ${item.content.primary_copies.map((copy, i) => `${i + 1}. ${copy}`).join('\n\n')
       const url = window.URL.createObjectURL(zipBlob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `AI文案内容_${format(new Date(), 'yyyy-MM-dd_HH-mm-ss')}.zip`;
+      link.download = `早安语文案_${format(new Date(), 'yyyy-MM-dd_HH-mm-ss')}.zip`;
       document.body.appendChild(link);
       link.click();
       
@@ -169,7 +152,53 @@ ${item.content.primary_copies.map((copy, i) => `${i + 1}. ${copy}`).join('\n\n')
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
       
-      console.log(`成功导出 ${generatedContents.length} 项内容！`);
+    } catch (error) {
+      console.error('批量导出失败:', error);
+    }
+  };
+
+  // 批量导出功能（幼儿段/小学段/名人名言）
+  const handleSegmentExport = async () => {
+    if (!segmentContent || !segmentContent.content.copies.length) {
+      return;
+    }
+    
+    try {
+      const { copies } = segmentContent.content;
+      const modeNames = {
+        toddler: '幼儿段文案',
+        primary: '小学段文案',
+        quote: '名人名言'
+      };
+      const modeName = modeNames[mode as 'toddler' | 'primary' | 'quote'] || '文案';
+      
+      // 创建文本内容
+      let contentText = `==============================\n  ${modeName}\n==============================\n\n`;
+      
+      // 根据模式类型添加场景说明
+      if (mode === 'quote' && segmentContent.quoteType) {
+        const sceneNames = {
+          morning: '早安语场景',
+          toddler: '幼儿段场景',
+          primary: '小学段场景'
+        };
+        contentText += `应用场景：${sceneNames[segmentContent.quoteType]}\n\n`;
+      }
+      
+      contentText += copies.map((copy, i) => `${i + 1}. ${copy}`).join('\n\n');
+      
+      // 创建下载链接
+      const blob = new Blob([contentText], { type: 'text/plain;charset=utf-8' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${modeName}_${format(new Date(), 'yyyy-MM-dd_HH-mm-ss')}.txt`;
+      document.body.appendChild(link);
+      link.click();
+      
+      // 清理
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
       
     } catch (error) {
       console.error('批量导出失败:', error);
@@ -248,14 +277,28 @@ ${item.content.primary_copies.map((copy, i) => `${i + 1}. ${copy}`).join('\n\n')
             {config.description}
           </p>
             </div>
-            {onRegenerateSegment && (
-              <div className="flex items-center gap-3">
-                {isGenerating && (
-                  <div className="flex items-center text-brand-blue-600">
-                    <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                    <span className="text-sm">生成中...</span>
-                  </div>
-                )}
+            <div className="flex items-center gap-3">
+              {isGenerating && (
+                <div className="flex items-center text-brand-blue-600">
+                  <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                  <span className="text-sm">生成中...</span>
+                </div>
+              )}
+              {/* 批量导出按钮 */}
+              {segmentContent && (
+                <Button
+                  onClick={handleSegmentExport}
+                  disabled={isGenerating}
+                  variant="outline"
+                  size="sm"
+                  className="flex items-center gap-2"
+                >
+                  <Package className="w-4 h-4" />
+                  批量导出
+                </Button>
+              )}
+              {/* 重新生成按钮 */}
+              {onRegenerateSegment && (
                 <Button
                   variant="outline"
                   size="sm"
@@ -266,8 +309,8 @@ ${item.content.primary_copies.map((copy, i) => `${i + 1}. ${copy}`).join('\n\n')
                   <RefreshCw className={`w-4 h-4 ${isGenerating ? 'animate-spin' : ''}`} />
                   重新生成
                 </Button>
-              </div>
-            )}
+              )}
+            </div>
           </div>
         </div>
 

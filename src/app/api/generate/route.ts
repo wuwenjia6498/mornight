@@ -39,8 +39,6 @@ const AIHUBMIX_API_URL = process.env.AIHUBMIX_API_URL || 'https://api.aihubmix.c
 
 // 获取日期上下文信息
 function getDateContext(dateString: string) {
-  console.log(`开始处理日期: ${dateString}`);
-  
   // 完全避免Date对象的时区问题，直接解析字符串
   const dateParts = dateString.split('-');
   if (dateParts.length !== 3) {
@@ -50,8 +48,6 @@ function getDateContext(dateString: string) {
   const year = parseInt(dateParts[0]);
   const month = parseInt(dateParts[1]);
   const day = parseInt(dateParts[2]);
-  
-  console.log(`解析结果 - 年: ${year}, 月: ${month}, 日: ${day}`);
   
   // 验证日期有效性
   if (isNaN(year) || isNaN(month) || isNaN(day) || 
@@ -63,8 +59,6 @@ function getDateContext(dateString: string) {
   const dateForWeekday = new Date(year, month - 1, day);
   const weekdays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
   const weekday = weekdays[dateForWeekday.getDay()];
-  
-  console.log(`计算星期 - 使用日期对象: ${dateForWeekday.toLocaleDateString()}, 星期: ${weekday}`);
 
   // 简单的季节判断
   let season = '';
@@ -87,7 +81,6 @@ function getDateContext(dateString: string) {
   let lunarData;
   try {
     lunarData = solarlunar.solar2lunar(year, month, day);
-    console.log('solarlunar返回的农历数据:', lunarData);
   } catch (lunarError) {
     console.error('solarlunar处理失败:', lunarError);
     // 如果农历转换失败，使用空数据继续
@@ -130,8 +123,6 @@ function getDateContext(dateString: string) {
     // 添加格式化的日期字符串
     formattedDate: `${year}年${month}月${day}日`
   };
-  
-  console.log(`日期上下文结果:`, result);
   
   return result;
 }
@@ -297,8 +288,6 @@ function createMorningPrompt(
   if (context.solarTerm) contextLines.push(`- 节气：${context.solarTerm}`);
   if (context.festival) contextLines.push(`- 节日：${context.festival}`);
 
-  console.log(`生成提示词 - 使用日期: ${displayDate}, 上下文信息: ${contextLines.join(' ')}, 创意元素: ${randomElement}`);
-
   const sections = {
     morning: `
 **## 早安寄语 (通用)**
@@ -306,6 +295,11 @@ function createMorningPrompt(
 **核心要求**:
 - **避免俗套**: 请避免使用"早安"、"清晨"、"早餐"等直接点明时间的词汇。
 - **富有哲思**: 风格应侧重于哲理思考，可以是一个能引发回味的微小洞察，或对某个生活瞬间的深度思考。
+- **严格遵守季节**: 文案内容必须与当前季节（${context.season}）相符，不能出现其他季节的元素。例如：
+  * 春季：不能提"落叶"、"雪花"、"丰收"
+  * 夏季：不能提"花开"、"落叶"、"寒风"
+  * 秋季：不能提"花开"、"新芽"、"酷暑"
+  * 冬季：不能提"花开"、"炎热"、"丰收"
 - **情境优先**: 如果"特殊节点"信息不是"无"，那么五段文案需要紧密围绕该节点进行创作。
 - **内容主旨**: 文案需像朋友一样，温柔地传递生活的美好与阅读的价值，为新的一天注入思考的能量。
 - **格式要求**: 排版采用一句一行的形式。
@@ -349,8 +343,9 @@ function createMorningPrompt(
 
 **# 核心要求**
 1.  **专业高级**: 内容必须体现专业性，逻辑清晰、条理分明，充满知识点和实用建议。杜绝任何机器翻译或空洞的口号。
-2.  **情境感知**: 如果当天是特殊的节气或节日，请将内容与该节点自然地结合。季节信息仅作为创作基调参考。
-3.  **严格分段**: 严格按照任务要求生成5段独立的早安语文案。
+2.  **季节准确性（最重要）**: 文案必须严格符合当前季节（${context.season}），绝对不能出现其他季节的特征元素。这是硬性要求！
+3.  **情境感知**: 如果当天是特殊的节气或节日，请将内容与该节点自然地结合。
+4.  **严格分段**: 严格按照任务要求生成5段独立的早安语文案。
 
 **# 任务：创作儿童阅读推广文案**
 ---
@@ -367,9 +362,6 @@ async function callAihubmixGeminiMorning(
   prompt: string,
   regenerate_column?: 'morning' | 'toddler' | 'primary'
 ): Promise<Partial<GeneratedContent>> {
-  console.log('调用aihubmix API，URL:', AIHUBMIX_API_URL);
-  console.log('使用模型: gemini-2.5-pro');
-  
   const requestBody = {
     model: 'gemini-2.5-pro',
     messages: [
@@ -385,8 +377,6 @@ async function callAihubmixGeminiMorning(
     frequency_penalty: 0.1,
     presence_penalty: 0.1
   };
-
-  console.log('请求体:', JSON.stringify(requestBody, null, 2));
   
   const response = await fetch(AIHUBMIX_API_URL, {
     method: 'POST',
@@ -397,8 +387,6 @@ async function callAihubmixGeminiMorning(
     body: JSON.stringify(requestBody),
   });
 
-  console.log('API响应状态:', response.status);
-
   if (!response.ok) {
     const errorData = await response.text();
     console.error('aihubmix API调用失败:', response.status, errorData);
@@ -406,11 +394,6 @@ async function callAihubmixGeminiMorning(
   }
 
   const data = await response.json();
-  console.log('aihubmix API返回数据结构:', {
-    hasChoices: !!data.choices,
-    choicesLength: data.choices?.length,
-    firstChoice: data.choices?.[0] ? 'exists' : 'missing'
-  });
 
   if (!data.choices || !data.choices[0] || !data.choices[0].message) {
     console.error('API返回数据格式错误:', data);
@@ -418,8 +401,6 @@ async function callAihubmixGeminiMorning(
   }
 
   const content = data.choices[0].message.content;
-  console.log('AI返回的原始内容长度:', content.length);
-  console.log('AI返回的原始内容:', content);
   
   // 简单清理并解析JSON - 采用多策略尝试
   const parsed = parseAIResponse(content, regenerate_column);
@@ -429,7 +410,6 @@ async function callAihubmixGeminiMorning(
     throw new Error('AI返回内容格式错误，无法解析JSON');
   }
   
-  console.log('JSON解析成功');
   return parsed;
 }
 
@@ -437,19 +417,16 @@ async function callAihubmixGeminiMorning(
 function parseAIResponse(content: string, regenerate_column?: string): any {
   // 策略1：直接解析（AI返回了正确的JSON）
   try {
-    console.log('策略1: 尝试直接解析...');
     const parsed = JSON.parse(content);
     if (validateParsedContent(parsed, regenerate_column)) {
-      console.log('策略1成功');
       return parsed;
     }
   } catch (e) {
-    console.log('策略1失败:', e instanceof Error ? e.message : String(e));
+    // 继续尝试其他策略
   }
 
   // 策略2：提取JSON并直接解析
   try {
-    console.log('策略2: 提取JSON部分...');
     let cleaned = content.trim();
     
     // 移除markdown代码块
@@ -462,17 +439,15 @@ function parseAIResponse(content: string, regenerate_column?: string): any {
       cleaned = cleaned.substring(start, end + 1);
       const parsed = JSON.parse(cleaned);
       if (validateParsedContent(parsed, regenerate_column)) {
-        console.log('策略2成功');
         return parsed;
       }
     }
   } catch (e) {
-    console.log('策略2失败:', e instanceof Error ? e.message : String(e));
+    // 继续尝试其他策略
   }
 
   // 策略3：转义所有换行符后解析（处理未转义的换行符）
   try {
-    console.log('策略3: 转义换行符...');
     let cleaned = content.trim();
     cleaned = cleaned.replace(/```json\s*/gi, '').replace(/```\s*/g, '');
     
@@ -489,24 +464,21 @@ function parseAIResponse(content: string, regenerate_column?: string): any {
       
       const parsed = JSON.parse(cleaned);
       if (validateParsedContent(parsed, regenerate_column)) {
-        console.log('策略3成功');
         return parsed;
       }
     }
   } catch (e) {
-    console.log('策略3失败:', e instanceof Error ? e.message : String(e));
+    // 继续尝试其他策略
   }
 
   // 策略4：使用容错解析
   try {
-    console.log('策略4: 容错解析...');
     const partial = extractPartialContent(content);
     if (partial && validateParsedContent(partial, regenerate_column)) {
-      console.log('策略4成功');
       return partial;
     }
   } catch (e) {
-    console.log('策略4失败:', e instanceof Error ? e.message : String(e));
+    // 所有策略都失败
   }
 
   return null;
@@ -556,9 +528,6 @@ function extractPartialContent(content: string): GeneratedContent | null {
 
 // 调用aihubmix平台的Gemini API生成幼儿段/小学段内容
 async function callAihubmixGeminiSegment(prompt: string): Promise<SegmentContent> {
-  console.log('调用aihubmix API生成段落内容，URL:', AIHUBMIX_API_URL);
-  console.log('使用模型: gemini-2.5-pro');
-  
   const requestBody = {
     model: 'gemini-2.5-pro',
     messages: [
@@ -574,8 +543,6 @@ async function callAihubmixGeminiSegment(prompt: string): Promise<SegmentContent
     frequency_penalty: 0.1,
     presence_penalty: 0.1
   };
-
-  console.log('段落生成请求体:', JSON.stringify(requestBody, null, 2));
   
   const response = await fetch(AIHUBMIX_API_URL, {
     method: 'POST',
@@ -586,8 +553,6 @@ async function callAihubmixGeminiSegment(prompt: string): Promise<SegmentContent
     body: JSON.stringify(requestBody),
   });
 
-  console.log('段落生成API响应状态:', response.status);
-
   if (!response.ok) {
     const errorData = await response.text();
     console.error('段落生成API调用失败:', response.status, errorData);
@@ -595,14 +560,6 @@ async function callAihubmixGeminiSegment(prompt: string): Promise<SegmentContent
   }
 
   const data = await response.json();
-  console.log('段落生成API返回完整数据:', JSON.stringify(data, null, 2));
-  console.log('段落生成API返回数据结构:', {
-    hasChoices: !!data.choices,
-    choicesLength: data.choices?.length,
-    firstChoice: data.choices?.[0] ? 'exists' : 'missing',
-    hasMessage: !!data.choices?.[0]?.message,
-    messageContent: data.choices?.[0]?.message?.content ? 'exists' : 'missing'
-  });
 
   if (!data.choices || !data.choices[0] || !data.choices[0].message) {
     console.error('段落生成API返回数据格式错误:', data);
@@ -610,8 +567,6 @@ async function callAihubmixGeminiSegment(prompt: string): Promise<SegmentContent
   }
 
   const content = data.choices[0].message.content;
-  console.log('AI返回的段落内容长度:', content?.length || 0);
-  console.log('AI返回的段落内容:', content);
   
   // 检查内容是否为空
   if (!content || content.trim() === '') {
@@ -637,7 +592,6 @@ async function callAihubmixGeminiSegment(prompt: string): Promise<SegmentContent
     throw new Error('quote_index超出范围');
   }
   
-  console.log('段落JSON解析成功');
   return parsed as SegmentContent;
 }
 
@@ -645,15 +599,13 @@ async function callAihubmixGeminiSegment(prompt: string): Promise<SegmentContent
 function parseSegmentResponse(content: string): any {
   // 策略1：直接解析
   try {
-    console.log('段落策略1: 直接解析...');
     return JSON.parse(content);
   } catch (e) {
-    console.log('段落策略1失败');
+    // 继续尝试其他策略
   }
 
   // 策略2：提取并解析
   try {
-    console.log('段落策略2: 提取JSON...');
     let cleaned = content.trim().replace(/```json\s*/gi, '').replace(/```\s*/g, '');
     const start = cleaned.indexOf('{');
     const end = cleaned.lastIndexOf('}');
@@ -662,12 +614,11 @@ function parseSegmentResponse(content: string): any {
       return JSON.parse(cleaned);
     }
   } catch (e) {
-    console.log('段落策略2失败');
+    // 继续尝试其他策略
   }
 
   // 策略3：转义换行符
   try {
-    console.log('段落策略3: 转义换行符...');
     let cleaned = content.trim().replace(/```json\s*/gi, '').replace(/```\s*/g, '');
     const start = cleaned.indexOf('{');
     const end = cleaned.lastIndexOf('}');
@@ -677,7 +628,7 @@ function parseSegmentResponse(content: string): any {
       return JSON.parse(cleaned);
     }
   } catch (e) {
-    console.log('段落策略3失败');
+    // 所有策略都失败
   }
 
   return null;
@@ -685,15 +636,12 @@ function parseSegmentResponse(content: string): any {
 
 
 export async function POST(request: NextRequest) {
-  console.log('=== API调用开始 ===');
   try {
     const body: GenerateRequest = await request.json();
     const { type, dates, count, regenerate_column } = body;
-    console.log('接收到的请求:', body);
 
     // 验证请求参数
     if (!type) {
-      console.log('错误: 未提供生成类型');
       return NextResponse.json(
         { success: false, error: '请提供生成类型' },
         { status: 400 }
@@ -701,7 +649,6 @@ export async function POST(request: NextRequest) {
     }
 
     if (type === 'morning' && (!dates || dates.length === 0)) {
-      console.log('错误: 早安语模式未提供日期');
       return NextResponse.json(
         { success: false, error: '早安语模式请提供至少一个日期' },
         { status: 400 }
@@ -709,7 +656,6 @@ export async function POST(request: NextRequest) {
     }
 
     if ((type === 'toddler' || type === 'primary') && (!count || count < 1)) {
-      console.log('错误: 幼儿段/小学段模式未提供有效条数');
       return NextResponse.json(
         { success: false, error: '请提供有效的生成条数' },
         { status: 400 }
@@ -717,19 +663,13 @@ export async function POST(request: NextRequest) {
     }
 
     if (type === 'quote' && (!count || count < 1 || !body.quoteType)) {
-      console.log('错误: 名人名言模式参数无效');
       return NextResponse.json(
         { success: false, error: '请提供有效的生成条数和应用场景' },
         { status: 400 }
       );
     }
-
-    console.log('检查环境变量...');
-    console.log('GEMINI_API_KEY存在:', !!process.env.GEMINI_API_KEY);
-    console.log('AIHUBMIX_API_URL:', process.env.AIHUBMIX_API_URL);
     
     if (!process.env.GEMINI_API_KEY) {
-      console.log('错误: Gemini API密钥未配置');
       return NextResponse.json(
         { success: false, error: 'Gemini API密钥未配置' },
         { status: 500 }
@@ -739,11 +679,8 @@ export async function POST(request: NextRequest) {
     // 处理名人名言生成
     if (type === 'quote') {
       try {
-        console.log(`正在生成名人名言，场景: ${body.quoteType}，条数: ${count}`);
         const prompt = createQuotePrompt(body.quoteType!, count!);
         const content = await callAihubmixGeminiSegment(prompt);
-        
-        console.log(`✅ 名人名言生成完成`);
         
         return NextResponse.json({
           success: true,
@@ -765,11 +702,8 @@ export async function POST(request: NextRequest) {
     // 处理幼儿段/小学段生成
     if (type === 'toddler' || type === 'primary') {
       try {
-        console.log(`正在生成${type === 'toddler' ? '幼儿段' : '小学段'}内容，条数: ${count}`);
         const prompt = createSegmentPrompt(type, count!);
         const content = await callAihubmixGeminiSegment(prompt);
-        
-        console.log(`✅ ${type === 'toddler' ? '幼儿段' : '小学段'}内容生成完成`);
         
         return NextResponse.json({
           success: true,
@@ -792,12 +726,9 @@ export async function POST(request: NextRequest) {
     if (type === 'morning' && regenerate_column && dates && dates.length === 1) {
       const dateString = dates[0];
       try {
-        console.log(`正在为 ${dateString} 重新生成 ${regenerate_column} 列...`);
         const context = getDateContext(dateString);
         const prompt = createMorningPrompt(dateString, context, regenerate_column);
         const content = await callAihubmixGeminiMorning(prompt, regenerate_column);
-        
-        console.log(`✅ ${dateString} ${regenerate_column} 列重新生成完成`);
         
         return NextResponse.json({
           success: true,
@@ -825,13 +756,9 @@ export async function POST(request: NextRequest) {
         try {
           const context = getDateContext(dateString);
           const prompt = createMorningPrompt(dateString, context);
-
-          console.log(`正在为 ${dateString} 生成早安语内容...`);
           
           // 调用AI生成内容
           const content = await callAihubmixGeminiMorning(prompt) as GeneratedContent;
-
-          console.log(`✅ ${dateString} 早安语内容生成完成`);
 
           results.push({
             date: dateString,
@@ -842,11 +769,6 @@ export async function POST(request: NextRequest) {
         } catch (dateError) {
           const errorMsg = dateError instanceof Error ? dateError.message : String(dateError);
           console.error(`处理日期 ${dateString} 时出错:`, dateError);
-          console.error('错误详情:', {
-            message: errorMsg,
-            stack: dateError instanceof Error ? dateError.stack : undefined,
-            dateString
-          });
           errors.push(`${dateString}: ${errorMsg}`);
           // 继续处理其他日期，不中断整个流程
           continue;

@@ -1,12 +1,27 @@
 "use client"
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Header, { TabType } from '@/components/Header';
 import LeftSidebar from '@/components/LeftSidebar';
 import CountSelector, { ContentType } from '@/components/CountSelector';
 import QuoteSelector, { QuoteType } from '@/components/QuoteSelector';
 import MainContent, { ColumnType } from '@/components/MainContent';
 import Footer from '@/components/Footer';
+import {
+  loadMorningContents,
+  saveMorningContents,
+  loadToddlerContent,
+  saveToddlerContent,
+  loadPrimaryContent,
+  savePrimaryContent,
+  loadQuoteMorningContent,
+  saveQuoteMorningContent,
+  loadQuoteToddlerContent,
+  saveQuoteToddlerContent,
+  loadQuotePrimaryContent,
+  saveQuotePrimaryContent,
+  HistoryItem,
+} from '@/lib/storage';
 
 // 早安语模式的接口定义
 interface MorningContent {
@@ -66,6 +81,87 @@ export default function Home() {
   const [regeneratingState, setRegeneratingState] = useState<{ date: string; column: ColumnType } | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  // 页面加载时恢复数据
+  useEffect(() => {
+    // 恢复早安语内容
+    const savedMorningContents = loadMorningContents();
+    if (savedMorningContents.length > 0) {
+      setMorningContents(savedMorningContents);
+      // 如果只有一条，自动选中
+      if (savedMorningContents.length === 1) {
+        setSelectedMorningContent(savedMorningContents[0]);
+      }
+    }
+
+    // 恢复幼儿段内容
+    const savedToddlerContent = loadToddlerContent();
+    if (savedToddlerContent) {
+      setToddlerContent(savedToddlerContent);
+    }
+
+    // 恢复小学段内容
+    const savedPrimaryContent = loadPrimaryContent();
+    if (savedPrimaryContent) {
+      setPrimaryContent(savedPrimaryContent);
+    }
+
+    // 恢复名人名言内容
+    const savedQuoteMorning = loadQuoteMorningContent();
+    if (savedQuoteMorning) {
+      setQuoteMorningContent(savedQuoteMorning);
+    }
+
+    const savedQuoteToddler = loadQuoteToddlerContent();
+    if (savedQuoteToddler) {
+      setQuoteToddlerContent(savedQuoteToddler);
+    }
+
+    const savedQuotePrimary = loadQuotePrimaryContent();
+    if (savedQuotePrimary) {
+      setQuotePrimaryContent(savedQuotePrimary);
+    }
+  }, []);
+
+  // 自动保存早安语内容
+  useEffect(() => {
+    if (morningContents.length > 0) {
+      saveMorningContents(morningContents);
+    }
+  }, [morningContents]);
+
+  // 自动保存幼儿段内容
+  useEffect(() => {
+    if (toddlerContent) {
+      saveToddlerContent(toddlerContent);
+    }
+  }, [toddlerContent]);
+
+  // 自动保存小学段内容
+  useEffect(() => {
+    if (primaryContent) {
+      savePrimaryContent(primaryContent);
+    }
+  }, [primaryContent]);
+
+  // 自动保存名人名言内容
+  useEffect(() => {
+    if (quoteMorningContent) {
+      saveQuoteMorningContent(quoteMorningContent);
+    }
+  }, [quoteMorningContent]);
+
+  useEffect(() => {
+    if (quoteToddlerContent) {
+      saveQuoteToddlerContent(quoteToddlerContent);
+    }
+  }, [quoteToddlerContent]);
+
+  useEffect(() => {
+    if (quotePrimaryContent) {
+      saveQuotePrimaryContent(quotePrimaryContent);
+    }
+  }, [quotePrimaryContent]);
+
   // 处理导航切换
   const handleTabChange = (tab: TabType) => {
     setActiveTab(tab);
@@ -97,8 +193,6 @@ export default function Home() {
         const day = String(date.getDate()).padStart(2, '0');
         return `${year}-${month}-${day}`;
       });
-
-      console.log('生成早安语，日期:', dateStrings);
 
       const response = await fetch('/api/generate', {
         method: 'POST',
@@ -143,8 +237,6 @@ export default function Home() {
     setError(null);
 
     try {
-      console.log(`生成${type}内容，条数:`, count);
-
       const response = await fetch('/api/generate', {
         method: 'POST',
         headers: {
@@ -185,7 +277,6 @@ export default function Home() {
   const handleRegenerateSegment = async () => {
     if (activeTab !== 'toddler' && activeTab !== 'primary') return;
     
-    console.log(`重新生成${activeTab === 'toddler' ? '幼儿段' : '小学段'}内容`);
     await handleGenerateSegmentContent(activeTab as ContentType);
   };
 
@@ -197,8 +288,6 @@ export default function Home() {
     setError(null);
 
     try {
-      console.log(`生成名人名言，场景: ${quoteType}，条数:`, quoteCount);
-
       const response = await fetch('/api/generate', {
         method: 'POST',
         headers: {
@@ -249,8 +338,47 @@ export default function Home() {
   const handleRegenerateQuote = async () => {
     if (activeTab !== 'quote') return;
     
-    console.log(`重新生成名人名言，场景: ${quoteType}`);
     await handleGenerateQuoteContent();
+  };
+
+  // 从历史记录恢复内容
+  const handleRestoreFromHistory = (item: HistoryItem) => {
+    if (item.type === 'morning' && Array.isArray(item.data)) {
+      // 恢复早安语内容
+      setMorningContents(item.data);
+      if (item.data.length === 1) {
+        setSelectedMorningContent(item.data[0]);
+      } else {
+        setSelectedMorningContent(null);
+      }
+      // 切换到早安语模式
+      setActiveTab('morning');
+    } else if (item.type === 'toddler' && item.data?.content) {
+      // 恢复幼儿段内容
+      setToddlerContent(item.data);
+      // 切换到幼儿段模式
+      setActiveTab('toddler');
+    } else if (item.type === 'primary' && item.data?.content) {
+      // 恢复小学段内容
+      setPrimaryContent(item.data);
+      // 切换到小学段模式
+      setActiveTab('primary');
+    } else if (item.type === 'quote' && item.data?.content) {
+      // 恢复名人名言内容
+      const quoteData = item.data;
+      if (quoteData.quoteType === 'morning') {
+        setQuoteMorningContent(quoteData);
+        setQuoteType('morning');
+      } else if (quoteData.quoteType === 'toddler') {
+        setQuoteToddlerContent(quoteData);
+        setQuoteType('toddler');
+      } else if (quoteData.quoteType === 'primary') {
+        setQuotePrimaryContent(quoteData);
+        setQuoteType('primary');
+      }
+      // 切换到名人名言模式
+      setActiveTab('quote');
+    }
   };
 
   // 早安语模式：重新生成某列
@@ -420,7 +548,10 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col">
       {/* 页头 */}
-      <Header activeTab={activeTab} onTabChange={handleTabChange} />
+      <Header 
+        activeTab={activeTab} 
+        onTabChange={handleTabChange}
+      />
       
       {/* 主要工作区 - 两栏布局 */}
       <div className="flex flex-1 overflow-hidden">

@@ -3,6 +3,7 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Loader2 } from 'lucide-react';
+import HistoryPanel from '@/components/HistoryPanel';
 
 export type ContentType = 'toddler' | 'primary';
 
@@ -53,22 +54,29 @@ export default function CountSelector({
       )}
 
       {/* 生成按钮 */}
-      <Button
-        onClick={onGenerateContent}
-        disabled={isGenerating}
-        className="w-full bg-gradient-to-r from-brand-blue-500 to-brand-blue-600 hover:from-brand-blue-600 hover:to-brand-blue-700 text-white font-medium py-6 text-base shadow-md hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-      >
-        {isGenerating ? (
-          <>
-            <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-            生成中...
-          </>
-        ) : (
-          <>
-            开始生成{contentType === 'toddler' ? '幼儿段' : '小学段'}文案
-          </>
-        )}
-      </Button>
+      <div className="space-y-3">
+        <Button
+          onClick={onGenerateContent}
+          disabled={isGenerating}
+          className="w-full bg-gradient-to-r from-brand-blue-500 to-brand-blue-600 hover:from-brand-blue-600 hover:to-brand-blue-700 text-white font-medium py-6 text-base shadow-md hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {isGenerating ? (
+            <>
+              <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+              生成中...
+            </>
+          ) : (
+            <>
+              开始生成{contentType === 'toddler' ? '幼儿段' : '小学段'}文案
+            </>
+          )}
+        </Button>
+        
+        {/* 历史记录按钮 */}
+        <div className="flex justify-center">
+          <HistoryPanel mode={contentType} />
+        </div>
+      </div>
     </div>
   );
 }

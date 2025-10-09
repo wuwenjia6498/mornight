@@ -6,6 +6,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { CalendarDays, X, Clock, Calendar as CalendarIcon, Users, Loader2 } from 'lucide-react';
+import HistoryPanel from '@/components/HistoryPanel';
 
 interface LeftSidebarProps {
   selectedDates: Date[];
@@ -216,7 +217,7 @@ export default function LeftSidebar({
       )}
 
       {/* 生成按钮 */}
-      <div className="mt-auto pt-5">
+      <div className="mt-auto pt-5 space-y-3">
         <Button
           onClick={onGenerateContent}
           disabled={selectedDates.length === 0 || isGenerating}
@@ -251,6 +252,11 @@ export default function LeftSidebar({
             正在为 {selectedDates.length} 个日期生成内容...
           </p>
         )}
+        
+        {/* 历史记录按钮 */}
+        <div className="flex justify-center pt-2">
+          <HistoryPanel mode="morning" />
+        </div>
       </div>
     </div>
   );
