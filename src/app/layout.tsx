@@ -12,7 +12,7 @@ const inter = Inter({
 
 export const metadata: Metadata = {
   title: "儿童阅读文案生成工作台",
-  description: "专业的AI童书编辑文案助手，智能生成儿童阅读教育文案",
+  description: "专业的AI文案助手，智能生成儿童阅读文案",
   viewport: {
     width: 'device-width',
     initialScale: 1,
