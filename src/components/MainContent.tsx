@@ -35,9 +35,10 @@ interface SegmentContent {
 }
 
 interface SegmentApiResponse {
-  type: 'toddler' | 'primary' | 'quote';
+  type: 'toddler' | 'primary' | 'quote' | 'picturebook';
   content: SegmentContent;
   quoteType?: 'morning' | 'toddler' | 'primary';  // 名人名言的场景类型
+  pictureBookCategory?: 'minimalist' | 'childview' | 'philosophy' | 'nature';  // 绘本语言的分类
 }
 
 interface MainContentProps {
