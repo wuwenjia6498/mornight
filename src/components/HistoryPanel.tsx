@@ -27,7 +27,7 @@ import {
 import { getHistory, deleteHistoryItem, clearHistory, HistoryItem, getStorageUsage } from '@/lib/storage';
 
 interface HistoryPanelProps {
-  mode: 'morning' | 'toddler' | 'primary' | 'quote';
+  mode: 'morning' | 'toddler' | 'primary' | 'quote' | 'picturebook';
   onRestoreContent?: (item: HistoryItem) => void;
 }
 
@@ -59,6 +59,11 @@ export default function HistoryPanel({ mode, onRestoreContent }: HistoryPanelPro
       title: '名人名言历史记录',
       description: '查看之前生成的名人名言内容',
       color: 'purple',
+    },
+    picturebook: {
+      title: '最美绘本语言历史记录',
+      description: '查看之前生成的绘本语言内容',
+      color: 'indigo',
     },
   };
 
@@ -233,7 +238,7 @@ export default function HistoryPanel({ mode, onRestoreContent }: HistoryPanelPro
               <div key={copyIndex} className="bg-white p-3 rounded-md shadow-sm border border-gray-300 relative group">
                 <div className="flex items-center gap-2 mb-2">
                   <span className="text-sm font-semibold text-brand-blue-700">
-                    {item.type === 'quote' ? '名人名言' : '专业指导'} #{copyIndex + 1}
+                    {item.type === 'quote' ? '名人名言' : item.type === 'picturebook' ? '绘本语言' : '专业指导'} #{copyIndex + 1}
                   </span>
                 </div>
                 <p className="text-gray-700 leading-relaxed whitespace-pre-line text-sm mb-2">{copy}</p>

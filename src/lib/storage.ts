@@ -11,6 +11,10 @@ const STORAGE_KEYS = {
   QUOTE_MORNING_CONTENT: 'mornight_quote_morning_content',
   QUOTE_TODDLER_CONTENT: 'mornight_quote_toddler_content',
   QUOTE_PRIMARY_CONTENT: 'mornight_quote_primary_content',
+  PICTUREBOOK_MINIMALIST_CONTENT: 'mornight_picturebook_minimalist_content',
+  PICTUREBOOK_CHILDVIEW_CONTENT: 'mornight_picturebook_childview_content',
+  PICTUREBOOK_PHILOSOPHY_CONTENT: 'mornight_picturebook_philosophy_content',
+  PICTUREBOOK_NATURE_CONTENT: 'mornight_picturebook_nature_content',
   HISTORY: 'mornight_generation_history',
 } as const;
 
@@ -18,7 +22,7 @@ const STORAGE_KEYS = {
 export interface HistoryItem {
   id: string;
   timestamp: number;
-  type: 'morning' | 'toddler' | 'primary' | 'quote';
+  type: 'morning' | 'toddler' | 'primary' | 'quote' | 'picturebook';
   data: any;
   preview: string; // 用于显示的预览文本
 }
@@ -196,11 +200,88 @@ export function loadQuotePrimaryContent(): any {
   return loadFromStorage(STORAGE_KEYS.QUOTE_PRIMARY_CONTENT, null);
 }
 
+
+/**
+ * 保存最美绘本语言内容（极简主义）
+ */
+export function savePictureBookMinimalistContent(content: any): void {
+  saveToStorage(STORAGE_KEYS.PICTUREBOOK_MINIMALIST_CONTENT, content);
+  
+  if (content && content.content?.copies) {
+    const preview = `生成了 ${content.content.copies.length} 条绘本语言（极简主义）`;
+    addToHistory('picturebook', content, preview);
+  }
+}
+
+/**
+ * 加载最美绘本语言内容（极简主义）
+ */
+export function loadPictureBookMinimalistContent(): any {
+  return loadFromStorage(STORAGE_KEYS.PICTUREBOOK_MINIMALIST_CONTENT, null);
+}
+
+/**
+ * 保存最美绘本语言内容（儿童视角）
+ */
+export function savePictureBookChildviewContent(content: any): void {
+  saveToStorage(STORAGE_KEYS.PICTUREBOOK_CHILDVIEW_CONTENT, content);
+  
+  if (content && content.content?.copies) {
+    const preview = `生成了 ${content.content.copies.length} 条绘本语言（儿童视角）`;
+    addToHistory('picturebook', content, preview);
+  }
+}
+
+/**
+ * 加载最美绘本语言内容（儿童视角）
+ */
+export function loadPictureBookChildviewContent(): any {
+  return loadFromStorage(STORAGE_KEYS.PICTUREBOOK_CHILDVIEW_CONTENT, null);
+}
+
+/**
+ * 保存最美绘本语言内容（哲理留白）
+ */
+export function savePictureBookPhilosophyContent(content: any): void {
+  saveToStorage(STORAGE_KEYS.PICTUREBOOK_PHILOSOPHY_CONTENT, content);
+  
+  if (content && content.content?.copies) {
+    const preview = `生成了 ${content.content.copies.length} 条绘本语言（哲理留白）`;
+    addToHistory('picturebook', content, preview);
+  }
+}
+
+/**
+ * 加载最美绘本语言内容（哲理留白）
+ */
+export function loadPictureBookPhilosophyContent(): any {
+  return loadFromStorage(STORAGE_KEYS.PICTUREBOOK_PHILOSOPHY_CONTENT, null);
+}
+
+/**
+ * 保存最美绘本语言内容（自然隐喻）
+ */
+export function savePictureBookNatureContent(content: any): void {
+  saveToStorage(STORAGE_KEYS.PICTUREBOOK_NATURE_CONTENT, content);
+  
+  if (content && content.content?.copies) {
+    const preview = `生成了 ${content.content.copies.length} 条绘本语言（自然隐喻）`;
+    addToHistory('picturebook', content, preview);
+  }
+}
+
+/**
+ * 加载最美绘本语言内容（自然隐喻）
+ */
+export function loadPictureBookNatureContent(): any {
+  return loadFromStorage(STORAGE_KEYS.PICTUREBOOK_NATURE_CONTENT, null);
+}
+
 /**
  * 添加到历史记录
  */
 function addToHistory(
-  type: 'morning' | 'toddler' | 'primary' | 'quote',
+  type: 'morning' | 'toddler' | 'primary' | 'quote' | 'picturebook',
   data: any,
   preview: string
 ): void {

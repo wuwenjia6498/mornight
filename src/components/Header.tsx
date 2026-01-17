@@ -5,7 +5,7 @@ import Image from 'next/image';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ImagePlus } from 'lucide-react';
 
-export type TabType = 'morning' | 'toddler' | 'primary' | 'quote';
+export type TabType = 'morning' | 'toddler' | 'primary' | 'quote' | 'picturebook';
 
 interface HeaderProps {
   activeTab: TabType;
@@ -34,31 +34,37 @@ export default function Header({ activeTab, onTabChange }: HeaderProps) {
         {/* 中间导航栏 */}
         <div className="flex-1 flex justify-center">
           <Tabs value={activeTab} onValueChange={(value) => onTabChange(value as TabType)}>
-            <TabsList className="grid w-full max-w-5xl grid-cols-4 h-14 bg-gray-100 p-1.5 gap-2">
+            <TabsList className="grid w-full max-w-6xl grid-cols-5 h-14 bg-gray-100 p-1.5 gap-2">
               <TabsTrigger 
                 value="morning" 
-                className="text-base font-medium px-20 h-full rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm transition-all"
+                className="text-base font-medium px-12 h-full rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm transition-all"
               >
                 早安语
               </TabsTrigger>
               <TabsTrigger 
                 value="toddler" 
-                className="text-base font-medium px-20 h-full rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm transition-all"
+                className="text-base font-medium px-12 h-full rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm transition-all"
               >
                 幼儿段
               </TabsTrigger>
               <TabsTrigger 
                 value="primary" 
-                className="text-base font-medium px-20 h-full rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm transition-all"
+                className="text-base font-medium px-12 h-full rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm transition-all"
               >
                 小学段
               </TabsTrigger>
               <TabsTrigger 
                 value="quote" 
-                className="text-base font-medium px-20 h-full rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm transition-all"
+                className="text-base font-medium px-12 h-full rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm transition-all"
               >
                 名人名言
+              </TabsTrigger>              <TabsTrigger
+                value="picturebook"
+                className="text-base font-medium px-12 h-full rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm transition-all"
+              >
+                最美绘本语言
               </TabsTrigger>
+
             </TabsList>
           </Tabs>
         </div>

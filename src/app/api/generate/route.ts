@@ -2,10 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import solarlunar from 'solarlunar';
 
 interface GenerateRequest {
-  type: 'morning' | 'toddler' | 'primary' | 'quote';
+  type: 'morning' | 'toddler' | 'primary' | 'quote' | 'picturebook';
   dates?: string[];
   count?: number;
   quoteType?: 'morning' | 'toddler' | 'primary';  // 名人名言的应用场景
+  pictureBookCategory?: 'minimalist' | 'childview' | 'philosophy' | 'nature';  // 绘本语言的分类
   regenerate_column?: 'morning' | 'toddler' | 'primary';
 }
 
@@ -264,6 +265,95 @@ ${config.examples.join('、')}
 }
 
 请生成${count}条符合${config.scene}的名人名言，放在copies数组中。quote_index固定为${count - 1}（因为所有内容都是名人名言）。`;
+}
+
+// 最美绘本语言生成提示词
+function createPictureBookPrompt(category: 'minimalist' | 'childview' | 'philosophy' | 'nature', count: number) {
+  const categoryConfig = {
+    minimalist: {
+      name: '极简主义',
+      description: '没有华丽的修辞和复杂的句式，短句为主，节奏舒缓，宁静、治愈、略带一点淡淡的孤独感或禅意',
+      characteristics: [
+        '极简主义风格：没有华丽修辞，简洁短句',
+        '节奏舒缓：宁静、治愈的语言氛围',
+        '情感基调：略带淡淡的孤独感或禅意'
+      ],
+      examples: [
+        '小时候，我住在山里。\n我从没向往过海洋，\n也从没向往过沙漠。\n因为我住在山里，就已经足够。\n——《山中旧事》'
+      ]
+    },
+    childview: {
+      name: '儿童视角',
+      description: '从儿童视角出发，切入点非常小（如看猫头鹰、游泳、住在山里），但指向的却是人生的大命题：孤独、满足、自信、追寻',
+      characteristics: [
+        '儿童视角：从儿童的眼睛看世界',
+        '成人智慧：简单表达中蕴含深刻哲理',
+        '小切口大主题：从小事物指向人生命题'
+      ],
+      examples: [
+        '出去看猫头鹰，\n不需要说话，\n不需要温暖舒适，\n也不需要别的什么，\n只要心中有一个希望。\n——《月下看猫头鹰》'
+      ]
+    },
+    philosophy: {
+      name: '哲理留白',
+      description: '通感与留白，文字不仅在描述动作，还在捕捉一种"空气感"，留下大量的空间让读者去想象画面',
+      characteristics: [
+        '通感运用：调动多种感官体验',
+        '空气感：营造氛围，留白艺术',
+        '想象空间：给读者足够的想象余地'
+      ],
+      examples: [
+        '"你觉得自己怎么样，你就会怎么样。\n觉得自己轻，就能学好游泳。\n想想看，鸟和鱼会觉得自己重吗？当然不会！"\n想变轻，就要觉得自己轻。\n试一试吧！\n——《大鲸鱼玛丽莲》'
+      ]
+    },
+    nature: {
+      name: '自然隐喻',
+      description: '通过描写自然（如风、山、光影）来隐喻人的内心世界或人生真理',
+      characteristics: [
+        '自然元素：风、山、光影、植物等',
+        '隐喻手法：以自然喻人生',
+        '诗意表达：充满诗意的语言'
+      ],
+      examples: [
+        '"有时候，\n人必须远行，\n才能发现近在咫尺的东西。"\n——《宝藏》'
+      ]
+    }
+  };
+
+  const config = categoryConfig[category];
+
+  return `请严格按照JSON格式返回，不要包含任何其他文字或markdown标记，直接返回纯JSON对象。
+
+# 任务：从真实绘本中摘录${config.name}风格的文字
+
+**风格：** ${config.description}
+
+**示例：**
+${config.examples.join('\n\n')}
+
+**核心要求：**
+1. 只能引用真实存在的绘本原文，禁止创作或改编
+2. 保留原书的断行节奏（用\\n表示）和标点符号
+3. 格式：原文内容 + 换行 + ——《书名》
+4. ${count}条必须来自${count}本不同的绘本
+
+**选材要求（重要）：**
+- 广泛选材：不要只选《猜猜我有多爱你》《爱心树》《逃家小兔》《小王子》等最知名的绘本
+- 多元来源：涵盖欧美、日本、中国原创等各地绘本，包括经典与近年新作
+- 发掘小众精品：凯迪克奖、格林威奖、博洛尼亚奖等获奖作品
+
+**篇幅要求：** 根据原文内容灵活调整长度，可长可短，优先保证内容完整性
+
+# 输出格式
+{
+  "copies": [
+    "原文内容\\n——《书名》",
+    "原文内容\\n——《书名》"
+  ],
+  "quote_index": -1
+}
+
+请摘录${count}条${config.name}风格的绘本原文。`;
 }
 
 // 生成早安语内容的提示词（保持原有的三段式生成方式）
@@ -578,7 +668,10 @@ async function callAihubmixGeminiSegment(prompt: string): Promise<SegmentContent
   const parsed = parseSegmentResponse(content);
   
   if (!parsed) {
-    console.error('所有解析策略都失败了');
+    console.error('所有解析策略都失败了，原始内容:');
+    console.error('--- 原始内容开始 ---');
+    console.error(content.substring(0, 2000)); // 只打印前2000字符避免日志过长
+    console.error('--- 原始内容结束 ---');
     throw new Error('AI返回内容格式错误，无法解析JSON');
   }
   
@@ -595,7 +688,7 @@ async function callAihubmixGeminiSegment(prompt: string): Promise<SegmentContent
   return parsed as SegmentContent;
 }
 
-// 新增：段落内容的简单解析函数
+// 新增：段落内容的简单解析函数（增强版，处理绘本语言等复杂格式）
 function parseSegmentResponse(content: string): any {
   // 策略1：直接解析
   try {
@@ -617,7 +710,7 @@ function parseSegmentResponse(content: string): any {
     // 继续尝试其他策略
   }
 
-  // 策略3：转义换行符
+  // 策略3：转义换行符（基础版）
   try {
     let cleaned = content.trim().replace(/```json\s*/gi, '').replace(/```\s*/g, '');
     const start = cleaned.indexOf('{');
@@ -626,6 +719,96 @@ function parseSegmentResponse(content: string): any {
       cleaned = cleaned.substring(start, end + 1);
       cleaned = cleaned.replace(/\r\n/g, '\\n').replace(/\r/g, '\\n').replace(/\n/g, '\\n');
       return JSON.parse(cleaned);
+    }
+  } catch (e) {
+    // 继续尝试其他策略
+  }
+
+  // 策略4：智能处理字符串内部的换行符（专门处理绘本语言等复杂内容）
+  try {
+    let cleaned = content.trim().replace(/```json\s*/gi, '').replace(/```\s*/g, '');
+    const start = cleaned.indexOf('{');
+    const end = cleaned.lastIndexOf('}');
+    if (start !== -1 && end !== -1 && end > start) {
+      cleaned = cleaned.substring(start, end + 1);
+      
+      // 只转义双引号内的换行符，保留 JSON 结构的换行
+      let inString = false;
+      let escaped = false;
+      let result = '';
+      
+      for (let i = 0; i < cleaned.length; i++) {
+        const char = cleaned[i];
+        
+        if (escaped) {
+          result += char;
+          escaped = false;
+          continue;
+        }
+        
+        if (char === '\\') {
+          escaped = true;
+          result += char;
+          continue;
+        }
+        
+        if (char === '"') {
+          inString = !inString;
+          result += char;
+          continue;
+        }
+        
+        // 在字符串内部，将真实换行符转义
+        if (inString && (char === '\n' || char === '\r')) {
+          if (char === '\r' && cleaned[i + 1] === '\n') {
+            result += '\\n';
+            i++; // 跳过 \n
+          } else {
+            result += '\\n';
+          }
+          continue;
+        }
+        
+        result += char;
+      }
+      
+      return JSON.parse(result);
+    }
+  } catch (e) {
+    // 继续尝试其他策略
+  }
+
+  // 策略5：使用正则提取 copies 数组（最后的兜底方案）
+  try {
+    let cleaned = content.trim().replace(/```json\s*/gi, '').replace(/```\s*/g, '');
+    
+    // 尝试匹配 copies 数组的内容
+    const copiesMatch = cleaned.match(/"copies"\s*:\s*\[([\s\S]*?)\]\s*[,}]/);
+    const quoteIndexMatch = cleaned.match(/"quote_index"\s*:\s*(-?\d+)/);
+    
+    if (copiesMatch) {
+      // 提取数组内容并手动解析
+      const arrayContent = copiesMatch[1];
+      const copies: string[] = [];
+      
+      // 匹配每个字符串元素
+      const stringPattern = /"((?:[^"\\]|\\.)*)"/g;
+      let match;
+      while ((match = stringPattern.exec(arrayContent)) !== null) {
+        // 处理转义字符
+        let str = match[1]
+          .replace(/\\n/g, '\n')
+          .replace(/\\"/g, '"')
+          .replace(/\\\\/g, '\\');
+        copies.push(str);
+      }
+      
+      if (copies.length > 0) {
+        return {
+          copies,
+          quote_index: quoteIndexMatch ? parseInt(quoteIndexMatch[1]) : -1
+        };
+      }
     }
   } catch (e) {
     // 所有策略都失败
@@ -668,6 +851,13 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+
+    if (type === 'picturebook' && (!count || count < 1 || !body.pictureBookCategory)) {
+      return NextResponse.json(
+        { success: false, error: '请提供有效的生成条数和语言风格分类' },
+        { status: 400 }
+      );
+    }
     
     if (!process.env.GEMINI_API_KEY) {
       return NextResponse.json(
@@ -681,7 +871,7 @@ export async function POST(request: NextRequest) {
       try {
         const prompt = createQuotePrompt(body.quoteType!, count!);
         const content = await callAihubmixGeminiSegment(prompt);
-        
+
         return NextResponse.json({
           success: true,
           content: {
@@ -697,6 +887,44 @@ export async function POST(request: NextRequest) {
           { status: 500 }
         );
       }
+    }
+
+    // 处理最美绘本语言生成（带自动重试机制）
+    if (type === 'picturebook') {
+      const maxRetries = 3;
+      let lastError: Error | null = null;
+      
+      for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+          console.log(`绘本语言生成尝试 ${attempt}/${maxRetries}`);
+          const prompt = createPictureBookPrompt(body.pictureBookCategory!, count!);
+          const content = await callAihubmixGeminiSegment(prompt);
+
+          return NextResponse.json({
+            success: true,
+            content: {
+              type: 'picturebook',
+              content: content
+            }
+          });
+
+        } catch (e) {
+          lastError = e instanceof Error ? e : new Error(String(e));
+          console.error(`绘本语言生成第 ${attempt} 次尝试失败:`, lastError.message);
+          
+          // 如果还有重试机会，等待一小段时间后重试
+          if (attempt < maxRetries) {
+            await new Promise(resolve => setTimeout(resolve, 1000));
+          }
+        }
+      }
+      
+      // 所有重试都失败
+      console.error('绘本语言生成全部重试失败:', lastError);
+      return NextResponse.json(
+        { success: false, error: '生成绘本语言失败，请稍后重试' },
+        { status: 500 }
+      );
     }
 
     // 处理幼儿段/小学段生成

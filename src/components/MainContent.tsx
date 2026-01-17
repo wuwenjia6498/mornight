@@ -7,7 +7,7 @@ import { Loader2, Calendar, Package, Copy, Check, BookOpen, School, Sunrise, Ref
 import JSZip from 'jszip';
 
 export type ColumnType = 'morning' | 'toddler' | 'primary';
-export type DisplayMode = 'morning' | 'toddler' | 'primary' | 'quote';
+export type DisplayMode = 'morning' | 'toddler' | 'primary' | 'quote' | 'picturebook';
 
 interface GeneratedContent {
   morning_copies: string[];
@@ -157,24 +157,25 @@ ${item.content.morning_copies.map((copy, i) => `${i + 1}. ${copy}`).join('\n\n')
     }
   };
 
-  // 批量导出功能（幼儿段/小学段/名人名言）
+  // 批量导出功能（幼儿段/小学段/名人名言/最美绘本语言）
   const handleSegmentExport = async () => {
     if (!segmentContent || !segmentContent.content.copies.length) {
       return;
     }
-    
+
     try {
       const { copies } = segmentContent.content;
       const modeNames = {
         toddler: '幼儿段文案',
         primary: '小学段文案',
-        quote: '名人名言'
+        quote: '名人名言',
+        picturebook: '最美绘本语言'
       };
-      const modeName = modeNames[mode as 'toddler' | 'primary' | 'quote'] || '文案';
-      
+      const modeName = modeNames[mode as 'toddler' | 'primary' | 'quote' | 'picturebook'] || '文案';
+
       // 创建文本内容
       let contentText = `==============================\n  ${modeName}\n==============================\n\n`;
-      
+
       // 根据模式类型添加场景说明
       if (mode === 'quote' && segmentContent.quoteType) {
         const sceneNames = {
@@ -183,10 +184,18 @@ ${item.content.morning_copies.map((copy, i) => `${i + 1}. ${copy}`).join('\n\n')
           primary: '小学段场景'
         };
         contentText += `应用场景：${sceneNames[segmentContent.quoteType]}\n\n`;
+      } else if (mode === 'picturebook' && segmentContent.pictureBookCategory) {
+        const categoryNames = {
+          minimalist: '极简主义',
+          childview: '儿童视角',
+          philosophy: '哲理留白',
+          nature: '自然隐喻'
+        };
+        contentText += `语言风格：${categoryNames[segmentContent.pictureBookCategory]}\n\n`;
       }
-      
+
       contentText += copies.map((copy, i) => `${i + 1}. ${copy}`).join('\n\n');
-      
+
       // 创建下载链接
       const blob = new Blob([contentText], { type: 'text/plain;charset=utf-8' });
       const url = window.URL.createObjectURL(blob);
@@ -195,11 +204,11 @@ ${item.content.morning_copies.map((copy, i) => `${i + 1}. ${copy}`).join('\n\n')
       link.download = `${modeName}_${format(new Date(), 'yyyy-MM-dd_HH-mm-ss')}.txt`;
       document.body.appendChild(link);
       link.click();
-      
+
       // 清理
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
-      
+
     } catch (error) {
       console.error('批量导出失败:', error);
     }
@@ -213,7 +222,7 @@ ${item.content.morning_copies.map((copy, i) => `${i + 1}. ${copy}`).join('\n\n')
           <div className="text-center">
             <Loader2 className="w-12 h-12 text-brand-blue-500 animate-spin mx-auto mb-4" />
             <h3 className="text-lg font-medium text-gray-900 mb-2">正在生成内容</h3>
-            <p className="text-gray-600">AI正在为您创作{mode === 'toddler' ? '幼儿段' : '小学段'}阅读教育文案...</p>
+            <p className="text-gray-600">AI正在为您创作{mode === 'toddler' ? '幼儿段' : mode === 'primary' ? '小学段' : mode === 'picturebook' ? '最美绘本语言' : ''}阅读教育文案...</p>
           </div>
         </div>
       );
@@ -238,10 +247,16 @@ ${item.content.morning_copies.map((copy, i) => `${i + 1}. ${copy}`).join('\n\n')
           title: '名人名言生成',
           subtitle: '智慧启迪与价值传递',
           description: '选择应用场景（早安语/幼儿段/小学段），生成适合不同场景的名人名言内容。'
+        },
+        picturebook: {
+          icon: BookOpen,
+          title: '最美绘本语言生成',
+          subtitle: '诗意治愈的绘本文字',
+          description: '选择语言风格（极简主义/儿童视角/哲理留白/自然隐喻），生成原样摘录自经典绘本的美好文字。'
         }
       };
 
-      const currentConfig = config[mode as 'toddler' | 'primary' | 'quote'];
+      const currentConfig = config[mode as 'toddler' | 'primary' | 'quote' | 'picturebook'];
       const Icon = currentConfig.icon;
 
       return (
@@ -255,12 +270,14 @@ ${item.content.morning_copies.map((copy, i) => `${i + 1}. ${copy}`).join('\n\n')
       );
     }
 
-    // 显示生成的幼儿段/小学段/名人名言内容
+    // 显示生成的幼儿段/小学段/名人名言/最美绘本语言内容
     const { copies, quote_index } = segmentContent.content;
-    const config = mode === 'toddler' ? 
-      { title: '幼儿段阅读指导', icon: BookOpen, color: 'rose', description: '以妈妈朋友口吻，创作温暖、专业且富有洞见的亲子绘本阅读文案' } : 
+    const config = mode === 'toddler' ?
+      { title: '幼儿段阅读指导', icon: BookOpen, color: 'rose', description: '以妈妈朋友口吻，创作温暖、专业且富有洞见的亲子绘本阅读文案' } :
       mode === 'primary' ?
       { title: '小学段阅读指导', icon: School, color: 'sky', description: '以"精辟引入+落地建议"结构，提供专业精炼的阅读能力提升策略' } :
+      mode === 'picturebook' ?
+      { title: '最美绘本语言', icon: BookOpen, color: 'indigo', description: '原样摘录自经典绘本的诗意文字，保留原书的断行节奏' } :
       { title: '名人名言精选', icon: Sparkles, color: 'purple', description: '精选适合不同场景的名人名言，传递智慧与价值' };
     const Icon = config.icon;
 
@@ -324,7 +341,7 @@ ${item.content.morning_copies.map((copy, i) => `${i + 1}. ${copy}`).join('\n\n')
                     <Icon className="w-5 h-5 text-brand-blue-600" />
                   </div>
                   <h4 className="font-bold text-brand-blue-700 text-lg">
-                    {mode === 'toddler' ? '幼儿段' : mode === 'primary' ? '小学段' : '名人名言'}
+                    {mode === 'toddler' ? '幼儿段' : mode === 'primary' ? '小学段' : mode === 'picturebook' ? '最美绘本语言' : '名人名言'}
                   </h4>
                 </div>
               </div>
@@ -340,6 +357,15 @@ ${item.content.morning_copies.map((copy, i) => `${i + 1}. ${copy}`).join('\n\n')
                       primary: '小学段场景'
                     };
                     itemTitle = segmentContent.quoteType ? sceneNames[segmentContent.quoteType] : '名人名言';
+                  } else if (mode === 'picturebook') {
+                    // 最美绘本语言模式：根据分类类型显示标题
+                    const categoryNames = {
+                      minimalist: '极简主义',
+                      childview: '儿童视角',
+                      philosophy: '哲理留白',
+                      nature: '自然隐喻'
+                    };
+                    itemTitle = segmentContent.pictureBookCategory ? categoryNames[segmentContent.pictureBookCategory] : '绘本语言';
                   } else {
                     // 幼儿段/小学段：所有内容都是专业指导（不再包含名人名言）
                     itemTitle = `专业指导 #${index + 1}`;
@@ -376,8 +402,8 @@ ${item.content.morning_copies.map((copy, i) => `${i + 1}. ${copy}`).join('\n\n')
     );
   };
 
-  // 如果是幼儿段、小学段或名人名言模式，使用专门的渲染函数
-  if (mode === 'toddler' || mode === 'primary' || mode === 'quote') {
+  // 如果是幼儿段、小学段、名人名言或最美绘本语言模式，使用专门的渲染函数
+  if (mode === 'toddler' || mode === 'primary' || mode === 'quote' || mode === 'picturebook') {
     return renderSegmentContent();
   }
 

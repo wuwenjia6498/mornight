@@ -5,6 +5,7 @@ import Header, { TabType } from '@/components/Header';
 import LeftSidebar from '@/components/LeftSidebar';
 import CountSelector, { ContentType } from '@/components/CountSelector';
 import QuoteSelector, { QuoteType } from '@/components/QuoteSelector';
+import PictureBookSelector, { PictureBookCategory } from '@/components/PictureBookSelector';
 import MainContent, { ColumnType } from '@/components/MainContent';
 import Footer from '@/components/Footer';
 import {
@@ -20,6 +21,14 @@ import {
   saveQuoteToddlerContent,
   loadQuotePrimaryContent,
   saveQuotePrimaryContent,
+  loadPictureBookMinimalistContent,
+  savePictureBookMinimalistContent,
+  loadPictureBookChildviewContent,
+  savePictureBookChildviewContent,
+  loadPictureBookPhilosophyContent,
+  savePictureBookPhilosophyContent,
+  loadPictureBookNatureContent,
+  savePictureBookNatureContent,
   HistoryItem,
 } from '@/lib/storage';
 
@@ -48,9 +57,10 @@ interface SegmentContent {
 }
 
 interface SegmentApiResponse {
-  type: 'toddler' | 'primary' | 'quote';
+  type: 'toddler' | 'primary' | 'quote' | 'picturebook';
   content: SegmentContent;
   quoteType?: 'morning' | 'toddler' | 'primary';  // 名人名言的场景类型
+  pictureBookCategory?: 'minimalist' | 'childview' | 'philosophy' | 'nature';  // 绘本语言的分类
 }
 
 export default function Home() {
@@ -75,6 +85,15 @@ export default function Home() {
   const [quoteMorningContent, setQuoteMorningContent] = useState<SegmentApiResponse | null>(null);
   const [quoteToddlerContent, setQuoteToddlerContent] = useState<SegmentApiResponse | null>(null);
   const [quotePrimaryContent, setQuotePrimaryContent] = useState<SegmentApiResponse | null>(null);
+
+  // 最美绘本语言模式状态
+  const [pictureBookCategory, setPictureBookCategory] = useState<PictureBookCategory | null>(null);
+  const [pictureBookCount, setPictureBookCount] = useState(5);
+  // 为每个分类分别保存内容
+  const [pictureBookMinimalistContent, setPictureBookMinimalistContent] = useState<SegmentApiResponse | null>(null);
+  const [pictureBookChildviewContent, setPictureBookChildviewContent] = useState<SegmentApiResponse | null>(null);
+  const [pictureBookPhilosophyContent, setPictureBookPhilosophyContent] = useState<SegmentApiResponse | null>(null);
+  const [pictureBookNatureContent, setPictureBookNatureContent] = useState<SegmentApiResponse | null>(null);
 
   // 通用状态
   const [isGenerating, setIsGenerating] = useState(false);
@@ -120,6 +139,27 @@ export default function Home() {
     if (savedQuotePrimary) {
       setQuotePrimaryContent(savedQuotePrimary);
     }
+
+    // 恢复最美绘本语言内容
+    const savedPictureBookMinimalist = loadPictureBookMinimalistContent();
+    if (savedPictureBookMinimalist) {
+      setPictureBookMinimalistContent(savedPictureBookMinimalist);
+    }
+
+    const savedPictureBookChildview = loadPictureBookChildviewContent();
+    if (savedPictureBookChildview) {
+      setPictureBookChildviewContent(savedPictureBookChildview);
+    }
+
+    const savedPictureBookPhilosophy = loadPictureBookPhilosophyContent();
+    if (savedPictureBookPhilosophy) {
+      setPictureBookPhilosophyContent(savedPictureBookPhilosophy);
+    }
+
+    const savedPictureBookNature = loadPictureBookNatureContent();
+    if (savedPictureBookNature) {
+      setPictureBookNatureContent(savedPictureBookNature);
+    }
   }, []);
 
   // 自动保存早安语内容
@@ -161,6 +201,32 @@ export default function Home() {
       saveQuotePrimaryContent(quotePrimaryContent);
     }
   }, [quotePrimaryContent]);
+
+  // 自动保存最美绘本语言内容
+  useEffect(() => {
+    if (pictureBookMinimalistContent) {
+      savePictureBookMinimalistContent(pictureBookMinimalistContent);
+    }
+  }, [pictureBookMinimalistContent]);
+
+  useEffect(() => {
+    if (pictureBookChildviewContent) {
+      savePictureBookChildviewContent(pictureBookChildviewContent);
+    }
+  }, [pictureBookChildviewContent]);
+
+  useEffect(() => {
+    if (pictureBookPhilosophyContent) {
+      savePictureBookPhilosophyContent(pictureBookPhilosophyContent);
+    }
+  }, [pictureBookPhilosophyContent]);
+
+  useEffect(() => {
+    if (pictureBookNatureContent) {
+      savePictureBookNatureContent(pictureBookNatureContent);
+    }
+  }, [pictureBookNatureContent]);
+
 
   // 处理导航切换
   const handleTabChange = (tab: TabType) => {
@@ -341,6 +407,70 @@ export default function Home() {
     await handleGenerateQuoteContent();
   };
 
+  // 最美绘本语言模式：生成内容
+  const handleGeneratePictureBookContent = async () => {
+    if (!pictureBookCategory) return;
+    
+    setIsGenerating(true);
+    setError(null);
+
+    try {
+      const response = await fetch('/api/generate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          type: 'picturebook',
+          pictureBookCategory: pictureBookCategory,
+          count: pictureBookCount
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || '生成绘本语言失败');
+      }
+
+      const result = await response.json();
+      
+      if (result.success) {
+        // 将分类信息也保存到内容中
+        const contentWithCategory = {
+          ...result.content,
+          pictureBookCategory: pictureBookCategory  // 保存当前选择的分类
+        };
+        
+        // 根据不同分类保存到不同的状态
+        if (pictureBookCategory === 'minimalist') {
+          setPictureBookMinimalistContent(contentWithCategory);
+        } else if (pictureBookCategory === 'childview') {
+          setPictureBookChildviewContent(contentWithCategory);
+        } else if (pictureBookCategory === 'philosophy') {
+          setPictureBookPhilosophyContent(contentWithCategory);
+        } else if (pictureBookCategory === 'nature') {
+          setPictureBookNatureContent(contentWithCategory);
+        }
+      } else {
+        throw new Error('API返回错误');
+      }
+
+    } catch (err) {
+      console.error('生成绘本语言时出错:', err);
+      setError(err instanceof Error ? err.message : '未知错误');
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  // 重新生成最美绘本语言
+  const handleRegeneratePictureBook = async () => {
+    if (activeTab !== 'picturebook') return;
+    
+    await handleGeneratePictureBookContent();
+  };
+
+
   // 从历史记录恢复内容
   const handleRestoreFromHistory = (item: HistoryItem) => {
     if (item.type === 'morning' && Array.isArray(item.data)) {
@@ -378,6 +508,24 @@ export default function Home() {
       }
       // 切换到名人名言模式
       setActiveTab('quote');
+    } else if (item.type === 'picturebook' && item.data?.content) {
+      // 恢复最美绘本语言内容
+      const pictureBookData = item.data;
+      if (pictureBookData.pictureBookCategory === 'minimalist') {
+        setPictureBookMinimalistContent(pictureBookData);
+        setPictureBookCategory('minimalist');
+      } else if (pictureBookData.pictureBookCategory === 'childview') {
+        setPictureBookChildviewContent(pictureBookData);
+        setPictureBookCategory('childview');
+      } else if (pictureBookData.pictureBookCategory === 'philosophy') {
+        setPictureBookPhilosophyContent(pictureBookData);
+        setPictureBookCategory('philosophy');
+      } else if (pictureBookData.pictureBookCategory === 'nature') {
+        setPictureBookNatureContent(pictureBookData);
+        setPictureBookCategory('nature');
+      }
+      // 切换到最美绘本语言模式
+      setActiveTab('picturebook');
     }
   };
 
@@ -435,7 +583,7 @@ export default function Home() {
   const renderLeftSidebar = () => {
     if (activeTab === 'morning') {
       return (
-        <LeftSidebar 
+        <LeftSidebar
           selectedDates={selectedDates}
           onDatesChange={handleDatesChange}
           onGenerateContent={handleGenerateMorningContent}
@@ -451,6 +599,18 @@ export default function Home() {
           count={quoteCount}
           onCountChange={setQuoteCount}
           onGenerateContent={handleGenerateQuoteContent}
+          isGenerating={isGenerating}
+          error={error}
+        />
+      );
+    } else if (activeTab === 'picturebook') {
+      return (
+        <PictureBookSelector
+          selectedCategory={pictureBookCategory}
+          onCategorySelect={setPictureBookCategory}
+          count={pictureBookCount}
+          onCountChange={setPictureBookCount}
+          onGenerateContent={handleGeneratePictureBookContent}
           isGenerating={isGenerating}
           error={error}
         />
@@ -491,7 +651,7 @@ export default function Home() {
       }));
 
       return (
-        <MainContent 
+        <MainContent
           generatedContents={legacyContents}
           isGenerating={isGenerating}
           regeneratingState={regeneratingState}
@@ -519,9 +679,9 @@ export default function Home() {
       const currentQuoteContent = quoteType === 'morning' ? quoteMorningContent :
                                   quoteType === 'toddler' ? quoteToddlerContent :
                                   quoteType === 'primary' ? quotePrimaryContent : null;
-      
+
       return (
-        <MainContent 
+        <MainContent
           generatedContents={[]}
           isGenerating={isGenerating}
           segmentContent={currentQuoteContent}
@@ -529,12 +689,28 @@ export default function Home() {
           onRegenerateSegment={handleRegenerateQuote}
         />
       );
+    } else if (activeTab === 'picturebook') {
+      // 最美绘本语言模式 - 根据选择的分类显示对应的内容
+      const currentPictureBookContent = pictureBookCategory === 'minimalist' ? pictureBookMinimalistContent :
+                                        pictureBookCategory === 'childview' ? pictureBookChildviewContent :
+                                        pictureBookCategory === 'philosophy' ? pictureBookPhilosophyContent :
+                                        pictureBookCategory === 'nature' ? pictureBookNatureContent : null;
+
+      return (
+        <MainContent
+          generatedContents={[]}
+          isGenerating={isGenerating}
+          segmentContent={currentPictureBookContent}
+          mode="picturebook"
+          onRegenerateSegment={handleRegeneratePictureBook}
+        />
+      );
     } else {
       // 幼儿段和小学段的专门显示组件
       const currentContent = activeTab === 'toddler' ? toddlerContent : primaryContent;
-      
+
       return (
-        <MainContent 
+        <MainContent
           generatedContents={[]}
           isGenerating={isGenerating}
           segmentContent={currentContent}
