@@ -937,12 +937,12 @@ async function callAihubmixGeminiMorning(
         content: prompt
       }
     ],
-    temperature: 0.7, // 降低温度值提高稳定性
-    max_tokens: 4000, // 增加token限制
+    temperature: 0.85,
+    max_tokens: 4000,
     stream: false,
-    top_p: 0.8,
-    frequency_penalty: 0.1,
-    presence_penalty: 0.1
+    top_p: 0.9,
+    frequency_penalty: 0.4,
+    presence_penalty: 0.3
   };
   
   const response = await fetch(AIHUBMIX_API_URL, {
@@ -1103,12 +1103,12 @@ async function callAihubmixGeminiSegment(prompt: string): Promise<SegmentContent
         content: prompt
       }
     ],
-    temperature: 0.7,
+    temperature: 0.85,
     max_tokens: 4000,
     stream: false,
-    top_p: 0.8,
-    frequency_penalty: 0.1,
-    presence_penalty: 0.1
+    top_p: 0.9,
+    frequency_penalty: 0.4,
+    presence_penalty: 0.3
   };
   
   const response = await fetch(AIHUBMIX_API_URL, {
