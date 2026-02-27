@@ -941,8 +941,8 @@ async function callAihubmixGeminiMorning(
     max_tokens: 4000,
     stream: false,
     top_p: 0.9,
-    frequency_penalty: 0.4,
-    presence_penalty: 0.3
+    frequency_penalty: 0.3,
+    presence_penalty: 0.25
   };
   
   const response = await fetch(AIHUBMIX_API_URL, {
@@ -1107,8 +1107,8 @@ async function callAihubmixGeminiSegment(prompt: string): Promise<SegmentContent
     max_tokens: 4000,
     stream: false,
     top_p: 0.9,
-    frequency_penalty: 0.4,
-    presence_penalty: 0.3
+    frequency_penalty: 0.3,
+    presence_penalty: 0.25
   };
   
   const response = await fetch(AIHUBMIX_API_URL, {
